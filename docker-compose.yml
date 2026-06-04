@@ -1,0 +1,116 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart_interior_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/smart_interior
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - AI_SERVICE_URL=http://ai-service:8001
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    networks:
+      - smart_interior_network
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./ai_services
+      dockerfile: Dockerfile
+    container_name: smart_interior_ai
+    ports:
+      - "8001:8001"
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL_CACHE_DIR=/models
+    volumes:
+      - model_cache:/models
+      - ./ai_services:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - smart_interior_network
+    restart: unless-stopped
+
+  database:
+    image: postgres:15-alpine
+    container_name: smart_interior_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=smart_interior
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smart_interior_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: smart_interior_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart_interior_network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: smart_interior_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - smart_interior_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  model_cache:
+
+networks:
+  smart_interior_network:
+    driver: bridge
