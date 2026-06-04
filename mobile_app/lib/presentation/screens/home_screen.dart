@@ -82,6 +82,8 @@ class HomeScreen extends StatelessWidget {
               _buildFengShuiCard(context),
               const SizedBox(height: 12),
               _buildSeasonalCard(context),
+              const SizedBox(height: 12),
+              _buildPetFriendlyCard(context),
               const SizedBox(height: 24),
               Text(
                 'Recent Designs',
@@ -339,6 +341,55 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Transform your room for every season and celebration',
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.arrow_forward, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPetFriendlyCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/pet-friendly'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [const Color(0xFF8D6E63), const Color(0xFFFFCC80)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.pets, color: Colors.white, size: 32),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pet-Friendly Design',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Design a safe, comfortable room for you and your pets',
                     style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
