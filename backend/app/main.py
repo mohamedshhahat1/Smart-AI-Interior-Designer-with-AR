@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.core.config import get_settings
 from backend.app.db.database import init_db
-from backend.app.api.routes import auth, room, design, furniture, cost, house, lighting, feng_shui, seasonal, pet_friendly
+from backend.app.api.routes import auth, room, design, furniture, cost, house, lighting, feng_shui, seasonal, pet_friendly, walkthrough_3d
 
 settings = get_settings()
 
@@ -43,6 +43,7 @@ app.include_router(lighting.router, prefix=API_PREFIX)
 app.include_router(feng_shui.router, prefix=API_PREFIX)
 app.include_router(seasonal.router, prefix=API_PREFIX)
 app.include_router(pet_friendly.router, prefix=API_PREFIX)
+app.include_router(walkthrough_3d.router, prefix=API_PREFIX)
 
 
 @app.get("/")
