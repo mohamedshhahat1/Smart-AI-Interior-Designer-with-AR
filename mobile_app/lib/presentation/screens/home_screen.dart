@@ -84,6 +84,8 @@ class HomeScreen extends StatelessWidget {
               _buildSeasonalCard(context),
               const SizedBox(height: 12),
               _buildPetFriendlyCard(context),
+              const SizedBox(height: 12),
+              _build3DWalkthroughCard(context),
               const SizedBox(height: 24),
               Text(
                 'Recent Designs',
@@ -400,6 +402,55 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.arrow_forward, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _build3DWalkthroughCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/3d-walkthrough'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [const Color(0xFF1A1A2E), const Color(0xFF16213E)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.three_d_rotation, color: Colors.white, size: 32),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '3D Room Walkthrough',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Explore your redesigned room in interactive 3D',
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.arrow_forward, color: Colors.white),

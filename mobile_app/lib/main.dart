@@ -17,6 +17,7 @@ import 'package:smart_interior_ai/presentation/screens/smart_lighting_screen.dar
 import 'package:smart_interior_ai/presentation/screens/feng_shui_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/seasonal_theme_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/pet_friendly_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/walkthrough_3d_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -72,6 +73,7 @@ final _router = GoRouter(
     GoRoute(path: '/feng-shui', builder: (context, state) => const FengShuiScreen()),
     GoRoute(path: '/seasonal', builder: (context, state) => const SeasonalThemeScreen()),
     GoRoute(path: '/pet-friendly', builder: (context, state) => const PetFriendlyScreen()),
+    GoRoute(path: '/3d-walkthrough', builder: (context, state) => const Walkthrough3DScreen()),
   ],
 );
 
