@@ -549,6 +549,99 @@ class PetFriendlyAnalysisResponse(BaseModel):
         from_attributes = True
 
 
+# --- 3D Walkthrough / Room Generation ---
+
+class Furniture3DObject(BaseModel):
+    object_id: str
+    name: str
+    category: str
+    model_url: Optional[str] = None
+    position: dict
+    rotation: dict
+    scale: dict
+    material: Optional[str] = None
+    interactable: bool = True
+
+
+class LightSource3D(BaseModel):
+    light_id: str
+    light_type: str
+    position: dict
+    color: str
+    intensity: float
+    cast_shadows: bool = True
+
+
+class CameraPosition(BaseModel):
+    position_id: str
+    label: str
+    position: dict
+    look_at: dict
+    fov: float = 60.0
+
+
+class WalkthroughPathPoint(BaseModel):
+    index: int
+    position: dict
+    look_at: dict
+    duration_seconds: float
+    easing: str = "ease_in_out"
+
+
+class Room3DModelResponse(BaseModel):
+    id: str
+    name: str
+    room_type: str
+    status: str
+    reconstruction_method: str
+    quality_level: str
+    dimensions: Optional[dict] = None
+    room_geometry: Optional[dict] = None
+    depth_map_url: Optional[str] = None
+    mesh_url: Optional[str] = None
+    glb_model_url: Optional[str] = None
+    usdz_model_url: Optional[str] = None
+    furniture_objects: Optional[list[Furniture3DObject]] = None
+    lighting_setup: Optional[list[LightSource3D]] = None
+    camera_positions: Optional[list[CameraPosition]] = None
+    walkthrough_path: Optional[list[WalkthroughPathPoint]] = None
+    polygon_count: Optional[int] = None
+    file_size_mb: Optional[float] = None
+    processing_time_seconds: Optional[float] = None
+    view_count: int = 0
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WalkthroughSessionResponse(BaseModel):
+    id: str
+    model_id: str
+    comparison_model_id: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    screenshots_taken: int = 0
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class Room3DSummary(BaseModel):
+    id: str
+    name: str
+    room_type: str
+    status: str
+    quality_level: str
+    glb_model_url: Optional[str] = None
+    polygon_count: Optional[int] = None
+    view_count: int = 0
+    created_at: datetime
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None

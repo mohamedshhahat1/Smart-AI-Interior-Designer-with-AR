@@ -293,3 +293,43 @@ class PetZonePlanRequest(BaseModel):
     room_type: str = Field(default="living_room")
     room_dimensions: Optional[dict] = None
     existing_furniture: Optional[list[str]] = None
+
+
+# --- 3D Walkthrough / Room Generation ---
+
+class Room3DGenerateRequest(BaseModel):
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    room_type: str = Field(default="living_room")
+    name: str = Field(default="My 3D Room", min_length=1, max_length=200)
+    quality_level: str = Field(default="standard", examples=["draft", "standard", "high", "ultra"])
+    reconstruction_method: str = Field(
+        default="depth_estimation",
+        examples=["depth_estimation", "nerf", "gaussian_splatting", "multi_view"],
+    )
+    room_dimensions: Optional[dict] = Field(None, examples=[{"width": 5.0, "depth": 4.0, "height": 2.8}])
+    detected_objects: Optional[list[dict]] = None
+    include_furniture: bool = Field(default=True)
+    include_lighting: bool = Field(default=True)
+    generate_walkthrough_path: bool = Field(default=True)
+    output_formats: list[str] = Field(default=["glb"], examples=[["glb", "usdz", "obj"]])
+
+
+class WalkthroughStartRequest(BaseModel):
+    model_id: str
+    comparison_model_id: Optional[str] = None
+
+
+class WalkthroughEndRequest(BaseModel):
+    session_id: str
+    camera_path_taken: Optional[list[dict]] = None
+    screenshots_taken: int = Field(default=0, ge=0)
+    annotations: Optional[list[dict]] = None
+
+
+class Room3DUpdateRequest(BaseModel):
+    furniture_changes: Optional[list[dict]] = Field(
+        None, description="Add, move, or remove 3D furniture objects"
+    )
+    lighting_changes: Optional[dict] = None
+    camera_positions: Optional[list[dict]] = None

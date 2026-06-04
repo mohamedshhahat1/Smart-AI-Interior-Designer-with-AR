@@ -7,6 +7,7 @@ from backend.app.models.lighting import LightingScene, MoodProfile, LightingAnal
 from backend.app.models.feng_shui import FengShuiAnalysis, FengShuiCure
 from backend.app.models.seasonal_theme import SeasonalTheme
 from backend.app.models.pet_friendly import PetProfile, PetFriendlyAnalysis
+from backend.app.models.walkthrough_3d import Room3DModel, WalkthroughSession
 
 __all__ = [
     "User", "Room", "Design", "Furniture",
@@ -15,4 +16,5 @@ __all__ = [
     "FengShuiAnalysis", "FengShuiCure",
     "SeasonalTheme",
     "PetProfile", "PetFriendlyAnalysis",
+    "Room3DModel", "WalkthroughSession",
 ]
