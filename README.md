@@ -17,6 +17,7 @@ A mobile application that:
 - **Recommends** real furniture products from catalogs
 - **Calculates** estimated renovation costs
 - **Allows redesign** through natural language commands
+- **Designs entire homes** with unified multi-room themes
 
 ## Core Features
 
@@ -29,6 +30,41 @@ A mobile application that:
 | Furniture Recommendation | Match detected needs with real product catalogs | Custom recommendation engine |
 | Cost Estimation | Calculate furniture, decoration, and labor costs | Budget optimization engine |
 | AI Design Assistant | Natural language commands for room redesign | OpenAI API / Google Gemini |
+| **Multi-Room House Design** | **Redesign entire homes with unified themes** | **Theme Unifier, Consistency Engine** |
+
+## Multi-Room House Design
+
+Instead of redesigning a single room, the system redesigns an entire apartment or house while maintaining a consistent visual identity.
+
+### How It Works
+
+1. **Create a House Project** — name your project, select a design style, and define your rooms (Living Room, Bedroom, Kitchen, Office, etc.)
+2. **Configure Shared Theme** — choose a unified color palette, material preferences, and lighting scheme
+3. **Generate All Rooms** — AI generates designs for every room using the shared theme DNA
+4. **Review & Refine** — adjust individual rooms while maintaining cross-room consistency
+5. **View Cost Report** — see per-room costs plus shared elements (flooring transitions, consistent paint, lighting)
+
+### Shared Design Elements
+
+```
+Style:           Scandinavian
+Primary Colors:  White, Light Blue, Natural Oak
+Materials:       Light oak, birch, linen, wool, ceramic
+Lighting:        Warm ambient, natural light emphasis
+Principles:      Emphasize natural light, functional minimal furniture,
+                 layer neutral textures, incorporate natural materials
+```
+
+### Consistency Engine
+
+The system validates cross-room visual coherence across three dimensions:
+- **Color Consistency (40%)** — palette overlap with house theme
+- **Style Consistency (35%)** — furniture style matching
+- **Material Consistency (25%)** — material language alignment
+
+### Supported Room Types
+
+Living Room, Bedroom, Kitchen, Bathroom, Dining Room, Office, Hallway, Studio
 
 ## System Architecture
 
@@ -119,6 +155,14 @@ User Image → Room Analysis (YOLO + SAM)
 | POST | `/api/v1/furniture/recommend` | Get furniture recommendations |
 | POST | `/api/v1/cost/calculate` | Calculate renovation cost |
 | POST | `/api/v1/ar/generate-scene` | Generate AR scene data |
+| POST | `/api/v1/house/project` | Create multi-room house project |
+| GET | `/api/v1/house/projects` | List all house projects |
+| GET | `/api/v1/house/project/{id}` | Get house project details |
+| PATCH | `/api/v1/house/project/{id}` | Update house project |
+| POST | `/api/v1/house/project/{id}/generate` | Generate all room designs |
+| POST | `/api/v1/house/room/refine` | Refine individual room design |
+| GET | `/api/v1/house/project/{id}/cost` | Get house cost report |
+| DELETE | `/api/v1/house/project/{id}` | Delete house project |
 
 ## Getting Started
 

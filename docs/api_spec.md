@@ -207,6 +207,121 @@ Calculate detailed renovation cost estimate.
 
 ---
 
+## Multi-Room House Design Endpoints
+
+### POST /house/project
+Create a new multi-room house design project.
+
+**Request Body:**
+```json
+{
+  "name": "My Apartment Redesign",
+  "description": "Complete apartment makeover in Scandinavian style",
+  "style": "scandinavian",
+  "rooms": [
+    {"room_label": "Living Room", "room_type": "living_room"},
+    {"room_label": "Master Bedroom", "room_type": "bedroom"},
+    {"room_label": "Kitchen", "room_type": "kitchen"},
+    {"room_label": "Home Office", "room_type": "office"}
+  ],
+  "budget": 15000,
+  "color_preferences": ["white", "light blue", "natural oak"],
+  "material_preferences": ["oak wood", "linen", "ceramic"],
+  "lighting_preference": "warm ambient lighting"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "name": "My Apartment Redesign",
+  "style": "scandinavian",
+  "shared_theme": {
+    "style": "scandinavian",
+    "primary_colors": ["white", "light blue", "natural oak"],
+    "accent_colors": ["#A8C5DA", "#7BA38E", "#D4A574"],
+    "materials": ["oak wood", "linen", "ceramic"],
+    "lighting": "warm ambient lighting",
+    "design_principles": ["Emphasize natural light...", "..."]
+  },
+  "room_count": 4,
+  "status": "draft",
+  "rooms": [
+    {"id": "uuid", "room_label": "Living Room", "room_type": "living_room", "order_index": 0, "status": "pending"},
+    {"id": "uuid", "room_label": "Master Bedroom", "room_type": "bedroom", "order_index": 1, "status": "pending"}
+  ]
+}
+```
+
+### POST /house/project/{id}/generate
+Generate AI designs for all rooms using the shared theme.
+
+**Request Body:**
+```json
+{
+  "project_id": "uuid",
+  "preserve_layout": true,
+  "regenerate_rooms": null
+}
+```
+
+**Response (200):** Full project with all rooms updated to `completed` status, including generated images, per-room costs, and design notes.
+
+### GET /house/projects
+List all house projects for the authenticated user.
+
+### GET /house/project/{id}
+Get full house project details with all room designs.
+
+### PATCH /house/project/{id}
+Update project style, budget, or preferences. Rebuilds shared theme on style change.
+
+### POST /house/room/refine
+Refine an individual room design while maintaining house-wide theme context.
+
+**Request Body:**
+```json
+{
+  "room_design_id": "uuid",
+  "instruction": "Make this bedroom more cozy while keeping the house theme"
+}
+```
+
+### GET /house/project/{id}/cost
+Get multi-room cost report.
+
+**Response (200):**
+```json
+{
+  "project_id": "uuid",
+  "project_name": "My Apartment Redesign",
+  "style": "scandinavian",
+  "total_cost": 12450.00,
+  "budget": 15000,
+  "budget_status": "within_budget",
+  "room_costs": [
+    {"room_label": "Living Room", "room_type": "living_room", "estimated_cost": 4200.00},
+    {"room_label": "Master Bedroom", "room_type": "bedroom", "estimated_cost": 3100.00},
+    {"room_label": "Kitchen", "room_type": "kitchen", "estimated_cost": 3800.00},
+    {"room_label": "Home Office", "room_type": "office", "estimated_cost": 1350.00}
+  ],
+  "shared_elements_cost": {
+    "flooring_transitions": 600.00,
+    "consistent_paint": 800.00,
+    "lighting_fixtures": 480.00,
+    "total": 1880.00
+  },
+  "savings_suggestions": null
+}
+```
+
+### DELETE /house/project/{id}
+Delete a house project and all associated room designs.
+
+---
+
 ## Error Responses
 
 All errors follow this format:
