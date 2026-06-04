@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.git/
+.env
+.env.*
+*.log
+.pytest_cache/
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.bin
+*.safetensors
+ml_models/
+*.md
