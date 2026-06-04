@@ -770,6 +770,84 @@ List past pet-friendly analyses.
 
 ---
 
+## 3D Walkthrough / Room Generation Endpoints
+
+### POST /3d/generate
+Generate a complete 3D room model with furniture, lighting, and walkthrough path.
+
+**Request Body:**
+```json
+{
+  "name": "Living Room 3D",
+  "room_type": "living_room",
+  "quality_level": "standard",
+  "reconstruction_method": "depth_estimation",
+  "room_dimensions": {"width": 5.0, "depth": 4.0, "height": 2.8},
+  "include_furniture": true,
+  "include_lighting": true,
+  "generate_walkthrough_path": true,
+  "output_formats": ["glb", "usdz"]
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "name": "Living Room 3D",
+  "room_type": "living_room",
+  "status": "completed",
+  "reconstruction_method": "depth_estimation",
+  "quality_level": "standard",
+  "dimensions": {"width": 5.0, "depth": 4.0, "height": 2.8},
+  "glb_model_url": "/storage/3d_models/uuid.glb",
+  "usdz_model_url": "/storage/3d_models/uuid.usdz",
+  "furniture_objects": [
+    {
+      "object_id": "furniture_0",
+      "name": "Sofa",
+      "category": "sofa",
+      "model_url": "models/sofa_modern.glb",
+      "position": {"x": 2.5, "y": 0, "z": 3.0},
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+      "material": "fabric_grey",
+      "interactable": true
+    }
+  ],
+  "lighting_setup": [
+    {"light_id": "ceiling_main", "light_type": "point", "position": {"x": 2.5, "y": 2.7, "z": 2.0}, "color": "#FFFFFF", "intensity": 0.8, "cast_shadows": true}
+  ],
+  "camera_positions": [
+    {"position_id": "overview", "label": "Room Overview", "position": {"x": 2.5, "y": 2.52, "z": 5.0}, "look_at": {"x": 2.5, "y": 0, "z": 2.0}, "fov": 75.0}
+  ],
+  "walkthrough_path": [
+    {"index": 0, "position": {"x": 2.5, "y": 1.6, "z": 3.7}, "look_at": {"x": 2.5, "y": 1.12, "z": 0}, "duration_seconds": 3.0, "easing": "ease_in"}
+  ],
+  "polygon_count": 15200,
+  "file_size_mb": 2.28,
+  "processing_time_seconds": 1.5,
+  "view_count": 0
+}
+```
+
+### GET /3d/models
+List user's 3D models (summary view with name, status, quality, polygon count).
+
+### GET /3d/models/{id}
+Get full 3D model details. Increments view count.
+
+### DELETE /3d/models/{id}
+Delete a 3D model.
+
+### POST /3d/walkthrough/start
+Begin an interactive walkthrough session. Optionally include a comparison model ID for side-by-side design version review.
+
+### POST /3d/walkthrough/end
+End the session and record camera path taken, screenshots, and annotations.
+
+---
+
 ## Error Responses
 
 All errors follow this format:

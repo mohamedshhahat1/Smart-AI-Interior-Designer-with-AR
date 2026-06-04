@@ -35,6 +35,52 @@ A mobile application that:
 | **Feng Shui Analysis** | **AI-powered room harmony scoring with Five Elements and Bagua** | **Bagua Mapper, Element Analyzer, Chi Flow, Cure Recommender** |
 | **Seasonal & Holiday Themes** | **Transform rooms for every season and celebration with decor, DIY, scents** | **Season Detector, Theme Generator, Transition Planner** |
 | **Pet-Friendly Design** | **Safety audit, zone planning, and product recommendations for pet owners** | **Safety Analyzer, Zone Planner, Product Recommender** |
+| **3D Walkthrough** | **Interactive 3D room exploration with walkthrough navigation** | **Depth Estimator, Mesh Generator, Scene Builder, NeRF/Gaussian Splatting** |
+
+## 3D Walkthrough / 3D Room Generation
+
+Transform room designs from static 2D images into fully interactive 3D environments that users can explore in real time.
+
+### Pipeline
+
+```
+Room Image → Depth Estimation (MiDaS) → Point Cloud
+           → Room Geometry (walls, floor, ceiling)
+           → Furniture Placement (15 item catalog with GLB models)
+           → Lighting Setup (ambient + point + directional)
+           → Camera Positions (6 preset views)
+           → Walkthrough Path (7-point tour / 12-step orbit / furniture focus)
+           → GLB/USDZ Export
+```
+
+### Reconstruction Methods
+
+| Method | Speed | Quality | Input Required |
+|--------|-------|---------|---------------|
+| Depth Estimation | Fast | Good | Single image |
+| NeRF | Slow | Excellent | Multiple images |
+| Gaussian Splatting | Medium | Excellent | Multiple images |
+| Multi-View Stereo | Medium | Good | Image pairs |
+
+### Quality Levels
+
+| Level | Polygons | Texture | Shadows | Est. Time |
+|-------|----------|---------|---------|-----------|
+| Draft | ~5K | 512px | None | ~2s |
+| Standard | ~15K | 1024px | Basic | ~8s |
+| High | ~25K | 2048px | Soft | ~20s |
+| Ultra | ~45K | 4096px | Ray-traced | ~60s |
+
+### Features
+
+- **3D Room Reconstruction** — Walls, floor, ceiling mesh from depth estimation
+- **Furniture Placement** — 15-item 3D catalog with automatic smart positioning
+- **Dynamic Lighting** — Ambient, ceiling, window, and lamp-based light sources
+- **6 Camera Presets** — Overview, entrance, center, left/right corners, low angle
+- **3 Walkthrough Modes** — Room tour, orbit, and furniture-focus paths with easing curves
+- **Design Comparison** — Side-by-side walkthrough of two design versions
+- **Session Tracking** — Record camera paths, screenshots, and annotations
+- **GLB + USDZ Export** — Industry-standard 3D formats for web and iOS AR
 
 ## AI-Powered Pet-Friendly Room Design
 
@@ -366,6 +412,12 @@ User Image → Room Analysis (YOLO + SAM)
 | GET | `/api/v1/pet-friendly/profiles/{id}` | Get pet profile |
 | POST | `/api/v1/pet-friendly/analyze` | Run pet-friendly room analysis |
 | GET | `/api/v1/pet-friendly/analyses` | List past analyses |
+| POST | `/api/v1/3d/generate` | Generate 3D room model |
+| GET | `/api/v1/3d/models` | List 3D models |
+| GET | `/api/v1/3d/models/{id}` | Get 3D model details |
+| DELETE | `/api/v1/3d/models/{id}` | Delete 3D model |
+| POST | `/api/v1/3d/walkthrough/start` | Start walkthrough session |
+| POST | `/api/v1/3d/walkthrough/end` | End walkthrough session |
 
 ## Getting Started
 
