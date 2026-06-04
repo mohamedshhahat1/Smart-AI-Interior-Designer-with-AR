@@ -188,6 +188,119 @@ class HouseCostReport(BaseModel):
     currency: str = "USD"
 
 
+# --- Smart Lighting & Mood Detection ---
+
+class LightingFixture(BaseModel):
+    name: str
+    type: str
+    brightness: float
+    color_temperature: int
+    color_hex: Optional[str] = None
+    position: Optional[str] = None
+
+
+class LightingZone(BaseModel):
+    zone_name: str
+    fixtures: list[LightingFixture]
+    brightness: float
+    purpose: str
+
+
+class MoodAnalysis(BaseModel):
+    detected_mood: str
+    confidence: float
+    energy_level: float
+    warmth_score: float
+    suggested_moods: list[str]
+    analysis_source: str
+
+
+class LightingRecommendation(BaseModel):
+    color_temperature: int
+    brightness: float
+    color_hex: Optional[str] = None
+    saturation: float
+    description: str
+    mood: str
+    time_of_day: str
+    fixtures: list[LightingFixture]
+    zones: list[LightingZone]
+    transition_duration: float
+    ambiance_notes: str
+
+
+class MoodDetectResponse(BaseModel):
+    mood_analysis: MoodAnalysis
+    lighting_recommendation: LightingRecommendation
+    alternative_scenes: list[dict]
+    circadian_note: Optional[str] = None
+
+
+class LightingSceneResponse(BaseModel):
+    id: str
+    name: str
+    mood: str
+    time_of_day: Optional[str] = None
+    activity: Optional[str] = None
+    color_temperature: int
+    brightness: float
+    color_hex: Optional[str] = None
+    saturation: float
+    fixtures: Optional[list[dict]] = None
+    zones: Optional[list[dict]] = None
+    transition_duration: float
+    is_circadian: bool
+    is_favorite: bool
+    usage_count: int
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CircadianScheduleResponse(BaseModel):
+    schedule: list[dict]
+    wake_time: str
+    sleep_time: str
+    total_transitions: int
+    energy_savings_estimate: Optional[str] = None
+
+
+class MoodProfileResponse(BaseModel):
+    id: str
+    name: str
+    mood_type: str
+    energy_level: float
+    warmth_preference: float
+    brightness_preference: float
+    preferred_colors: Optional[list[str]] = None
+    preferred_activities: Optional[list[str]] = None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SmartHomeExportResponse(BaseModel):
+    platform: str
+    config: dict
+    instructions: list[str]
+    compatible_devices: list[str]
+
+
+class LightingInsightsResponse(BaseModel):
+    total_scenes: int
+    most_used_mood: Optional[str] = None
+    average_brightness: Optional[float] = None
+    average_color_temperature: Optional[int] = None
+    peak_usage_time: Optional[str] = None
+    mood_distribution: dict
+    recommendations: list[str]
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None

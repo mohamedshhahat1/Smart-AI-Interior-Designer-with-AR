@@ -110,3 +110,76 @@ class HouseRoomUpdateRequest(BaseModel):
         ..., max_length=500,
         examples=["Make this bedroom more cozy while keeping the house theme"]
     )
+
+
+# --- Smart Lighting & Mood Detection ---
+
+class MoodDetectRequest(BaseModel):
+    text_input: Optional[str] = Field(
+        None, max_length=500,
+        examples=["I want to relax after a long day", "Hosting a dinner party tonight"],
+    )
+    time_of_day: Optional[str] = Field(None, examples=["morning", "afternoon", "evening", "night"])
+    activity: Optional[str] = Field(
+        None, examples=["relaxing", "working", "entertaining", "sleeping", "cooking", "reading"],
+    )
+    energy_level: Optional[float] = Field(None, ge=0.0, le=1.0)
+    room_type: Optional[str] = None
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+
+
+class LightingSceneCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    mood: str = Field(..., min_length=2, max_length=50)
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    time_of_day: Optional[str] = None
+    activity: Optional[str] = None
+    color_temperature: int = Field(..., ge=1800, le=6500)
+    brightness: float = Field(..., ge=0.0, le=1.0)
+    color_hex: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+    saturation: float = Field(default=0.0, ge=0.0, le=1.0)
+    fixtures: Optional[list[dict]] = None
+    zones: Optional[list[dict]] = None
+    transition_duration: float = Field(default=2.0, ge=0.0, le=30.0)
+
+
+class LightingSceneUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    color_temperature: Optional[int] = Field(None, ge=1800, le=6500)
+    brightness: Optional[float] = Field(None, ge=0.0, le=1.0)
+    color_hex: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+    saturation: Optional[float] = Field(None, ge=0.0, le=1.0)
+    transition_duration: Optional[float] = Field(None, ge=0.0, le=30.0)
+    is_favorite: Optional[bool] = None
+
+
+class CircadianScheduleRequest(BaseModel):
+    room_id: Optional[str] = None
+    wake_time: str = Field(default="07:00", pattern=r"^\d{2}:\d{2}$")
+    sleep_time: str = Field(default="23:00", pattern=r"^\d{2}:\d{2}$")
+    work_hours: Optional[list[str]] = Field(None, examples=[["09:00", "17:00"]])
+    preferences: Optional[dict] = None
+
+
+class MoodProfileCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    mood_type: str = Field(..., examples=["relaxed", "focused", "energetic", "romantic", "cozy"])
+    energy_level: float = Field(default=0.5, ge=0.0, le=1.0)
+    warmth_preference: float = Field(default=0.5, ge=0.0, le=1.0)
+    brightness_preference: float = Field(default=0.5, ge=0.0, le=1.0)
+    preferred_colors: Optional[list[str]] = None
+    preferred_activities: Optional[list[str]] = None
+
+
+class LightingFeedbackRequest(BaseModel):
+    scene_id: str
+    mood: str
+    rating: int = Field(..., ge=1, le=5)
+    duration_minutes: Optional[float] = Field(None, ge=0)
+
+
+class SmartHomeExportRequest(BaseModel):
+    scene_id: str
+    platform: str = Field(..., examples=["philips_hue", "lifx", "homekit", "google_home", "alexa"])

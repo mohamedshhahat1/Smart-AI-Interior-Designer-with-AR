@@ -3,5 +3,10 @@ from backend.app.models.room import Room
 from backend.app.models.design import Design
 from backend.app.models.furniture import Furniture
 from backend.app.models.house_project import HouseProject, HouseRoomDesign
+from backend.app.models.lighting import LightingScene, MoodProfile, LightingAnalytics
 
-__all__ = ["User", "Room", "Design", "Furniture", "HouseProject", "HouseRoomDesign"]
+__all__ = [
+    "User", "Room", "Design", "Furniture",
+    "HouseProject", "HouseRoomDesign",
+    "LightingScene", "MoodProfile", "LightingAnalytics",
+]
