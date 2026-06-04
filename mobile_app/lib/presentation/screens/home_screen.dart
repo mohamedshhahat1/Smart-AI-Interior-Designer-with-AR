@@ -74,6 +74,8 @@ class HomeScreen extends StatelessWidget {
                   )),
                 ],
               ),
+              const SizedBox(height: 16),
+              _buildMultiRoomCard(context),
               const SizedBox(height: 24),
               Text(
                 'Recent Designs',
@@ -148,6 +150,55 @@ class HomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMultiRoomCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/house/new'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.accentColor, AppTheme.successColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.home_work, color: Colors.white, size: 32),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Multi-Room House Design',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Redesign your entire home with a unified theme',
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.arrow_forward, color: Colors.white),
             ),
           ],
         ),

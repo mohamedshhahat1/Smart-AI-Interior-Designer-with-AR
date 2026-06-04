@@ -10,6 +10,9 @@ import 'package:smart_interior_ai/presentation/screens/design_result_screen.dart
 import 'package:smart_interior_ai/presentation/screens/ar_view_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/cost_estimation_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/ai_assistant_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/house_project_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/house_detail_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/house_cost_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -46,6 +49,19 @@ final _router = GoRouter(
       path: '/assistant/:roomId',
       builder: (context, state) => AIAssistantScreen(
         roomId: state.pathParameters['roomId']!,
+      ),
+    ),
+    GoRoute(path: '/house/new', builder: (context, state) => const HouseProjectScreen()),
+    GoRoute(
+      path: '/house/:projectId',
+      builder: (context, state) => HouseDetailScreen(
+        projectId: state.pathParameters['projectId']!,
+      ),
+    ),
+    GoRoute(
+      path: '/house/:projectId/cost',
+      builder: (context, state) => HouseCostScreen(
+        projectId: state.pathParameters['projectId']!,
       ),
     ),
   ],
