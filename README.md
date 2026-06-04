@@ -33,6 +33,54 @@ A mobile application that:
 | **Multi-Room House Design** | **Redesign entire homes with unified themes** | **Theme Unifier, Consistency Engine** |
 | **Smart Lighting & Mood** | **AI-powered lighting that adapts to mood and circadian rhythm** | **Mood Analyzer, Scene Generator, Circadian Engine** |
 | **Feng Shui Analysis** | **AI-powered room harmony scoring with Five Elements and Bagua** | **Bagua Mapper, Element Analyzer, Chi Flow, Cure Recommender** |
+| **Seasonal & Holiday Themes** | **Transform rooms for every season and celebration with decor, DIY, scents** | **Season Detector, Theme Generator, Transition Planner** |
+
+## AI-Powered Seasonal & Holiday Room Themes
+
+Transform your room for every season and celebration with AI-generated decor plans, DIY projects, scent recommendations, and smooth transitions between themes.
+
+### Supported Themes
+
+**Seasons:** Spring (bloom & pastels), Summer (tropical & coastal), Autumn (harvest & warmth), Winter (hygge & wonderland)
+
+**Holidays:** Christmas, Halloween, Eid al-Fitr, Diwali, Valentine's Day, Thanksgiving, Easter, Lunar New Year, Hanukkah, New Year
+
+### Features
+
+- **Auto Season Detection** — Detects current season by hemisphere with upcoming holiday lookahead
+- **Complete Theme Packages** — Color palettes, textures, materials, decor items, lighting mood
+- **DIY Projects** — Step-by-step instructions with materials lists, difficulty levels, time and cost estimates
+- **Scent Recommendations** — Season-appropriate scents with method (candle, diffuser, simmer pot) and placement
+- **Budget Tiers** — Budget (0.5x), Medium (1x), Premium (2x) pricing for all recommendations
+- **Intensity Control** — From subtle seasonal hints (reusable items only) to full room transformation
+- **Reusability Scoring** — Track what percentage of decor can be reused next year
+- **Theme Transitions** — Gradual 7-day or immediate transition plans with keep/add/remove item lists
+- **Multi-Cultural** — Authentic themes for global celebrations (Eid, Diwali, Lunar New Year, etc.)
+
+### Example
+
+```
+Theme: Warm Autumn Harvest | Budget: Medium | Intensity: 70%
+
+Color Palette:
+  Primary:  Cornsilk, Antique White, Linen
+  Accent:   Chocolate, Peru, Saddle Brown, Firebrick, Goldenrod
+
+Decor Items:
+  1. Pumpkin & gourd display      — dining table    $15   (seasonal)
+  2. Chunky knit throw blanket    — sofa arm        $55   (reusable)
+  3. Dried wheat bundle           — entrance vase   $12   (reusable)
+  4. Copper candle holders        — mantel          $30   (reusable)
+  5. Fall leaf garland            — doorway         $18   (reusable)
+
+DIY Project: Cinnamon Stick Candle Wrap
+  Difficulty: Easy | Time: 20 min | Cost: $6
+  Materials: pillar candle, cinnamon sticks, twine, hot glue
+
+Scents: Cinnamon & apple (simmer pot), Pumpkin spice (candle), Cedarwood (diffuser)
+
+Reusability: 83% of items reusable next season
+```
 
 ## AI-Powered Feng Shui Analysis
 
@@ -256,6 +304,13 @@ User Image → Room Analysis (YOLO + SAM)
 | GET | `/api/v1/feng-shui/analyses/{id}` | Get analysis details |
 | POST | `/api/v1/feng-shui/cures/apply` | Mark a cure as applied |
 | POST | `/api/v1/feng-shui/compatibility` | Personal Kua number check |
+| POST | `/api/v1/seasonal/detect` | Auto-detect current season & holidays |
+| POST | `/api/v1/seasonal/generate` | Generate seasonal/holiday theme |
+| POST | `/api/v1/seasonal/transition` | Plan theme transition |
+| GET | `/api/v1/seasonal/themes` | List saved themes |
+| GET | `/api/v1/seasonal/themes/{id}` | Get theme details |
+| POST | `/api/v1/seasonal/themes/{id}/favorite` | Toggle favorite |
+| DELETE | `/api/v1/seasonal/themes/{id}` | Delete theme |
 
 ## Getting Started
 

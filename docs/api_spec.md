@@ -572,6 +572,101 @@ Calculate personal Kua number and compatible directions.
 
 ---
 
+## Seasonal & Holiday Theme Endpoints
+
+### POST /seasonal/detect
+Auto-detect current season and upcoming holidays.
+
+**Request Body:**
+```json
+{
+  "hemisphere": "northern",
+  "include_upcoming_holidays": true,
+  "days_ahead": 30
+}
+```
+
+**Response (200):**
+```json
+{
+  "current_season": "autumn",
+  "hemisphere": "northern",
+  "days_into_season": 45,
+  "days_until_next_season": 47,
+  "next_season": "winter",
+  "upcoming_holidays": [
+    {"name": "halloween", "display_name": "Halloween", "days_until": 12, "region": "western"},
+    {"name": "thanksgiving", "display_name": "Thanksgiving", "days_until": 39, "region": "us"}
+  ],
+  "recommended_theme": "halloween",
+  "seasonal_mood": "cozy, warm, rustic, harvest"
+}
+```
+
+### POST /seasonal/generate
+Generate a complete seasonal or holiday theme with decor, DIY, and scents.
+
+**Request Body:**
+```json
+{
+  "theme_type": "holiday",
+  "holiday": "christmas",
+  "room_type": "living_room",
+  "budget_tier": "medium",
+  "intensity": 0.7,
+  "include_diy": true,
+  "include_scents": true
+}
+```
+
+**Response (201):** Complete theme with color palette, textures, materials, decor items (name, category, placement, cost, reusability), DIY projects (materials, instructions, time), scent recommendations, and reusability score.
+
+### POST /seasonal/transition
+Plan a transition from one theme to another.
+
+**Request Body:**
+```json
+{
+  "from_theme_id": "uuid",
+  "to_season": "winter",
+  "gradual": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "from_theme": "Warm Autumn Harvest",
+  "to_theme": "Cozy Winter Wonderland",
+  "transition_steps": [
+    {"step": 1, "action": "Remove holiday-specific items first", "timing": "Day 1"},
+    {"step": 2, "action": "Swap textiles (pillows, throws, curtains)", "timing": "Day 2-3"},
+    {"step": 3, "action": "Update color accents and small decor", "timing": "Day 4-5"},
+    {"step": 4, "action": "Add new seasonal centerpieces and focal items", "timing": "Day 6-7"},
+    {"step": 5, "action": "Adjust lighting mood and scents", "timing": "Day 7"}
+  ],
+  "items_to_keep": ["Copper candle holders"],
+  "items_to_add": ["Faux fur throw", "Mercury glass candle holders", "Pinecone arrangement"],
+  "items_to_remove": ["Pumpkin & gourd display", "Fall leaf garland"],
+  "estimated_effort": "moderate",
+  "estimated_cost": 125.00
+}
+```
+
+### GET /seasonal/themes
+List saved themes (optional `?theme_type=holiday` filter).
+
+### GET /seasonal/themes/{id}
+Get full theme details.
+
+### POST /seasonal/themes/{id}/favorite
+Toggle favorite status.
+
+### DELETE /seasonal/themes/{id}
+Delete a saved theme.
+
+---
+
 ## Error Responses
 
 All errors follow this format:
