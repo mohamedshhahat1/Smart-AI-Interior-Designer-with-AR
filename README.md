@@ -423,23 +423,156 @@ User Image → Room Analysis (YOLO + SAM)
 
 ### Prerequisites
 
-- Python 3.11+
-- Flutter 3.x
-- PostgreSQL 15+
-- Docker & Docker Compose
-- CUDA-compatible GPU (for AI models)
+| Tool | Version | Download |
+|------|---------|----------|
+| Python | 3.11+ | https://python.org/downloads |
+| Flutter | 3.19+ | https://docs.flutter.dev/get-started/install |
+| Docker & Docker Compose | Latest | https://docker.com/products/docker-desktop |
+| Git | Latest | https://git-scm.com/downloads |
+| CUDA GPU (optional) | For AI models | Required only for AI service inference |
 
-### Backend Setup
+### Quick Start with Docker (All Platforms)
+
+```bash
+git clone https://github.com/mohamedshhahat1/Smart-AI-Interior-Designer-with-AR.git
+cd Smart-AI-Interior-Designer-with-AR
+
+# Copy environment file
+cp .env.example .env
+
+# Start all services (backend, AI, database, Redis, MinIO)
+docker compose up -d
+
+# Verify all services are running
+docker compose ps
+```
+
+Then open:
+- **API Docs**: http://localhost:8000/docs
+- **MinIO Console**: http://localhost:9001 (minioadmin / minioadmin)
+
+### Production Deployment
+
+```bash
+# Use the production compose file with your .env.production
+docker compose -f docker-compose.prod.yml up -d
+
+# Run database migrations
+docker compose exec backend alembic upgrade head
+```
+
+---
+
+## Running on Windows
+
+### Option 1: Docker Desktop (Recommended)
+
+```powershell
+# Install WSL 2 if prompted
+wsl --install
+
+# Clone and start
+git clone https://github.com/mohamedshhahat1/Smart-AI-Interior-Designer-with-AR.git
+cd Smart-AI-Interior-Designer-with-AR
+
+copy .env.example .env
+docker compose up -d
+```
+
+### Option 2: Manual Setup on Windows
+
+#### Step 1: Start PostgreSQL & Redis via Docker
+
+```powershell
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=smart_interior postgres:15-alpine
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+```
+
+#### Step 2: Backend Setup
+
+```powershell
+cd backend
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+set ENVIRONMENT=development
+set DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/smart_interior
+set REDIS_URL=redis://localhost:6379/0
+set SECRET_KEY=dev-only-insecure-key-do-not-use-in-production
+set DEBUG=true
+
+# Run database migrations
+alembic upgrade head
+
+# Start the server
+uvicorn app.main:app --reload --port 8000
+```
+
+Backend API docs available at http://localhost:8000/docs
+
+#### Step 3: AI Service (Optional — requires GPU)
+
+```powershell
+cd ai_services
+
+python -m venv venv
+venv\Scripts\activate
+
+pip install -r requirements.txt
+
+uvicorn main:app --reload --port 8001
+```
+
+#### Step 4: Flutter Mobile App
+
+```powershell
+cd mobile_app
+
+flutter pub get
+
+# Run on connected Android device or emulator
+flutter run
+
+# Or run on Chrome (web mode)
+flutter run -d chrome
+```
+
+> **Note:** Update the API URL in `mobile_app/lib/core/constants/app_constants.dart`:
+> ```dart
+> static const String baseUrl = 'http://10.0.2.2:8000/api/v1';  // Android emulator
+> // or
+> static const String baseUrl = 'http://localhost:8000/api/v1';   // Web / iOS simulator
+> ```
+
+---
+
+## Running on macOS / Linux
+
+### Backend
 
 ```bash
 cd backend
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+
+export ENVIRONMENT=development
+export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/smart_interior
+export REDIS_URL=redis://localhost:6379/0
+export SECRET_KEY=dev-only-insecure-key-do-not-use-in-production
+export DEBUG=true
+
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Mobile App Setup
+### Mobile App
 
 ```bash
 cd mobile_app
@@ -447,11 +580,54 @@ flutter pub get
 flutter run
 ```
 
-### Docker Setup
+---
+
+## Running Tests
 
 ```bash
-docker-compose up -d
+cd backend
+pip install -r requirements-dev.txt
+
+# Run all tests with coverage
+pytest
+
+# Run specific test file
+pytest tests/test_auth.py -v
 ```
+
+---
+
+## Quick API Test
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Register a user
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test User","email":"test@test.com","password":"password123"}'
+
+# Login
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"password123"}'
+```
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| `pip install` fails on `asyncpg` (Windows) | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
+| Docker: "WSL 2 not installed" | Run `wsl --install` in PowerShell as Admin, restart PC |
+| Port 5432 already in use | Stop existing PostgreSQL: `net stop postgresql-x64-15` (Windows) or `brew services stop postgresql` (macOS) |
+| Flutter: no device found | Run `flutter doctor` and follow instructions |
+| CUDA not available | AI service works without GPU using fallback/mock responses |
+| `alembic upgrade head` fails | Ensure PostgreSQL is running and DATABASE_URL is correct |
+| CORS errors in browser | Check `CORS_ALLOWED_ORIGINS` in your `.env` file includes your frontend URL |
+| Redis connection refused | Ensure Redis is running: `docker ps` or `redis-cli ping` |
 
 ## License
 
