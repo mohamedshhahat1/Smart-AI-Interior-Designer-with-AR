@@ -13,6 +13,7 @@ import 'package:smart_interior_ai/presentation/screens/ai_assistant_screen.dart'
 import 'package:smart_interior_ai/presentation/screens/house_project_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/house_detail_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/house_cost_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/smart_lighting_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -64,6 +65,7 @@ final _router = GoRouter(
         projectId: state.pathParameters['projectId']!,
       ),
     ),
+    GoRoute(path: '/lighting', builder: (context, state) => const SmartLightingScreen()),
   ],
 );
 
