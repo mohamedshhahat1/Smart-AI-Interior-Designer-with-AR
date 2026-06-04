@@ -37,5 +37,6 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
+    """Create all tables. Use only for testing — production uses Alembic migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
