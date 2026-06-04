@@ -432,6 +432,146 @@ Get personalized lighting usage analytics (mood distribution, averages, recommen
 
 ---
 
+## Feng Shui Analysis Endpoints
+
+### POST /feng-shui/analyze
+Run a complete Feng Shui analysis on a room.
+
+**Request Body:**
+```json
+{
+  "room_type": "bedroom",
+  "compass_direction": "south",
+  "birth_year": 1995,
+  "include_bagua": true,
+  "include_element_analysis": true
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "room_type": "bedroom",
+  "compass_direction": "south",
+  "overall_score": 6.8,
+  "chi_flow_score": 7.2,
+  "element_balance_score": 6.5,
+  "yin_yang_score": 7.0,
+  "clutter_score": 6.0,
+  "commanding_position_score": 7.5,
+  "score_interpretation": "Good Feng Shui — positive energy with minor areas for improvement",
+  "bagua_map": [
+    {
+      "zone": "Fame & Reputation",
+      "direction": "south",
+      "element": "fire",
+      "life_area": "Recognition, reputation, how the world sees you",
+      "colors": ["red", "orange", "purple"],
+      "status": "good",
+      "score": 7.0,
+      "enhancement": null
+    }
+  ],
+  "element_analysis": [
+    {
+      "element": "wood",
+      "current_level": 0.35,
+      "ideal_level": 0.15,
+      "status": "excess",
+      "associated_colors": ["green", "brown", "teal"],
+      "associated_shapes": ["columnar", "rectangular"],
+      "enhancement_items": ["Add metal element: metallic frames"]
+    }
+  ],
+  "chi_flow_issues": [
+    {
+      "issue_type": "mirror_in_bedroom",
+      "severity": "medium",
+      "location": "bedroom",
+      "description": "Mirror facing bed disrupts sleep energy",
+      "impact": "Restless sleep, amplified worries"
+    }
+  ],
+  "cures": [
+    {
+      "id": "uuid",
+      "category": "bedroom",
+      "severity": "medium",
+      "issue_description": "Mirror facing bed disrupts sleep",
+      "cure_description": "Cover the mirror at night with a decorative fabric panel",
+      "element": null,
+      "placement": "over mirror",
+      "estimated_cost": 20.0,
+      "priority": 3,
+      "is_applied": false
+    }
+  ],
+  "color_recommendations": {
+    "primary": ["soft white", "pale lavender", "warm blush"],
+    "accent": ["dusty rose", "soft grey"],
+    "avoid": ["bright red", "electric blue"],
+    "reason": "Calming yin colors support rest and intimacy"
+  },
+  "lucky_directions": {
+    "lucky": ["north", "south", "east", "southeast"],
+    "unlucky": ["west", "northeast", "northwest", "southwest"]
+  },
+  "birth_element": "wood",
+  "summary": "Good Feng Shui — positive energy with minor areas for improvement"
+}
+```
+
+### GET /feng-shui/analyses
+List all Feng Shui analyses for the authenticated user.
+
+### GET /feng-shui/analyses/{id}
+Get full analysis details with cures.
+
+### POST /feng-shui/cures/apply
+Mark a specific cure as applied.
+
+**Request Body:**
+```json
+{
+  "analysis_id": "uuid",
+  "cure_id": "uuid"
+}
+```
+
+### POST /feng-shui/compatibility
+Calculate personal Kua number and compatible directions.
+
+**Request Body:**
+```json
+{
+  "birth_year": 1995,
+  "room_type": "office",
+  "compass_direction": "north"
+}
+```
+
+**Response (200):**
+```json
+{
+  "birth_year": 1995,
+  "kua_number": 6,
+  "birth_element": "metal",
+  "lucky_directions": ["west", "northeast", "southwest", "northwest"],
+  "unlucky_directions": ["east", "southeast", "south", "north"],
+  "compatible_colors": ["white", "grey", "silver", "gold"],
+  "compatible_elements": ["metal", "water"],
+  "room_recommendations": {
+    "direction_compatibility": "unfavorable",
+    "suggestion": "Your lucky directions are west, northeast — orient key furniture toward these",
+    "recommended_colors": ["white", "grey", "silver", "gold"],
+    "room_type": "office"
+  }
+}
+```
+
+---
+
 ## Error Responses
 
 All errors follow this format:

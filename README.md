@@ -32,6 +32,50 @@ A mobile application that:
 | AI Design Assistant | Natural language commands for room redesign | OpenAI API / Google Gemini |
 | **Multi-Room House Design** | **Redesign entire homes with unified themes** | **Theme Unifier, Consistency Engine** |
 | **Smart Lighting & Mood** | **AI-powered lighting that adapts to mood and circadian rhythm** | **Mood Analyzer, Scene Generator, Circadian Engine** |
+| **Feng Shui Analysis** | **AI-powered room harmony scoring with Five Elements and Bagua** | **Bagua Mapper, Element Analyzer, Chi Flow, Cure Recommender** |
+
+## AI-Powered Feng Shui Analysis
+
+Analyze your room's energy flow using traditional Feng Shui principles enhanced with AI object detection and spatial analysis.
+
+### Analysis Dimensions
+
+| Dimension | Weight | What It Measures |
+|-----------|--------|------------------|
+| Chi Flow | 25% | Energy circulation paths, pathway blockages |
+| Element Balance | 20% | Five Elements (Wood, Fire, Earth, Metal, Water) ratio |
+| Yin-Yang | 15% | Balance between active and passive energy |
+| Clutter | 20% | Object density and visual chaos |
+| Commanding Position | 20% | Key furniture placement relative to doorways |
+
+### Features
+
+- **Bagua Map** — 9-zone room analysis mapping directions to life areas (Career, Wealth, Love, Health, etc.)
+- **Five Elements** — Detect current element levels from furniture and compare to room-specific ideal ratios
+- **Chi Flow Analysis** — Identify blocked pathways, door-window alignment issues, and sha chi
+- **Commanding Position** — Verify bed, desk, and sofa face the entrance for security and authority
+- **Cure Recommendations** — Prioritized, actionable fixes with element, placement, and estimated cost
+- **Color Guidance** — Room-specific color recommendations (primary, accent, avoid) with Feng Shui reasoning
+- **Personal Kua Number** — Birth year calculation for lucky/unlucky directions and compatible elements
+- **Furniture Placement** — AI-generated positioning advice with Feng Shui reasoning for each item
+
+### Example Output
+
+```
+Room: Living Room | Direction: South | Score: 7.2/10
+
+Element Balance:
+  Wood:  ████████░░ 35% (ideal: 20%) — excess
+  Fire:  ███░░░░░░░ 15% (ideal: 20%) — deficient
+  Earth: █████░░░░░ 25% (ideal: 25%) — balanced
+  Metal: ██░░░░░░░░ 10% (ideal: 15%) — deficient
+  Water: ███░░░░░░░ 15% (ideal: 20%) — deficient
+
+Cures:
+  1. [HIGH] Add candles or warm lighting to strengthen Fire element — south area
+  2. [MED]  Place a small tabletop fountain for Water element — north area
+  3. [MED]  Include metallic frames or wind chimes — west corner
+```
 
 ## Smart Lighting Integration with Mood Detection
 
@@ -207,6 +251,11 @@ User Image → Room Analysis (YOLO + SAM)
 | POST | `/api/v1/lighting/feedback` | Submit scene rating |
 | POST | `/api/v1/lighting/export` | Export to smart home platform |
 | GET | `/api/v1/lighting/insights` | Get lighting usage analytics |
+| POST | `/api/v1/feng-shui/analyze` | Run Feng Shui analysis |
+| GET | `/api/v1/feng-shui/analyses` | List all analyses |
+| GET | `/api/v1/feng-shui/analyses/{id}` | Get analysis details |
+| POST | `/api/v1/feng-shui/cures/apply` | Mark a cure as applied |
+| POST | `/api/v1/feng-shui/compatibility` | Personal Kua number check |
 
 ## Getting Started
 
