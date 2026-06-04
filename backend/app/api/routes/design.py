@@ -1,6 +1,8 @@
 import uuid
+import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,21 +14,28 @@ from backend.app.schemas.response_models import DesignResponse
 from backend.app.services.ai_service import ai_service
 from backend.app.services.cost_service import cost_service
 from backend.app.core.security import get_current_user_id
+from backend.app.core.limiter import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/design", tags=["Design"])
 
 
 @router.post("/generate", response_model=DesignResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def generate_design(
-    request: DesignGenerateRequest,
+    request: Request,
+    body: DesignGenerateRequest = Depends(),
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    try:
+        rid = uuid.UUID(body.room_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
     result = await db.execute(
-        select(Room).where(
-            Room.id == uuid.UUID(request.room_id),
-            Room.user_id == uuid.UUID(user_id),
-        )
+        select(Room).where(Room.id == rid, Room.user_id == uuid.UUID(user_id))
     )
     room = result.scalar_one_or_none()
     if not room:
@@ -40,13 +49,20 @@ async def generate_design(
         "image_url": room.image_url,
     }
 
-    ai_result = await ai_service.generate_design(
-        room_analysis=room_analysis,
-        style=request.style,
-        prompt=request.prompt,
-        budget=request.budget,
-        preserve_layout=request.preserve_layout,
-    )
+    try:
+        ai_result = await ai_service.generate_design(
+            room_analysis=room_analysis,
+            style=body.style,
+            prompt=body.prompt,
+            budget=body.budget,
+            preserve_layout=body.preserve_layout,
+        )
+    except httpx.HTTPStatusError:
+        logger.error("AI service returned error for design generation")
+        raise HTTPException(status_code=502, detail="AI service unavailable")
+    except (httpx.RequestError, Exception) as e:
+        logger.error("AI service connection error: %s", e)
+        raise HTTPException(status_code=503, detail="AI service not reachable")
 
     furniture_items = ai_result.get("furniture_list", [])
     cost_breakdown = cost_service.calculate_cost(
@@ -56,8 +72,8 @@ async def generate_design(
 
     design = Design(
         room_id=room.id,
-        style=request.style,
-        prompt=request.prompt,
+        style=body.style,
+        prompt=body.prompt,
         generated_image_url=ai_result.get("image_url"),
         color_palette=ai_result.get("color_palette"),
         furniture_list=ai_result.get("furniture_list"),

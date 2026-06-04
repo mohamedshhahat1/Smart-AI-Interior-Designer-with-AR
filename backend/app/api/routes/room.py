@@ -1,6 +1,8 @@
 import uuid
+import logging
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,14 +12,18 @@ from backend.app.schemas.response_models import RoomResponse, RoomAnalysis
 from backend.app.services.ai_service import ai_service
 from backend.app.core.security import get_current_user_id
 from backend.app.core.config import get_settings
+from backend.app.core.limiter import limiter
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 router = APIRouter(prefix="/room", tags=["Room"])
 
 
 @router.post("/upload", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def upload_room(
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
@@ -39,7 +45,14 @@ async def upload_room(
     image_filename = f"rooms/{user_id}/{uuid.uuid4()}.{file.filename.split('.')[-1]}"
     image_url = f"/storage/{image_filename}"
 
-    analysis = await ai_service.analyze_room(image_url)
+    try:
+        analysis = await ai_service.analyze_room(image_url)
+    except httpx.HTTPStatusError:
+        logger.error("AI service returned error for room analysis")
+        raise HTTPException(status_code=502, detail="AI service unavailable")
+    except (httpx.RequestError, Exception) as e:
+        logger.error("AI service connection error: %s", e)
+        raise HTTPException(status_code=503, detail="AI service not reachable")
 
     room = Room(
         user_id=uuid.UUID(user_id),
@@ -69,8 +82,14 @@ async def get_room(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    try:
+        rid = uuid.UUID(room_id)
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
     result = await db.execute(
-        select(Room).where(Room.id == uuid.UUID(room_id), Room.user_id == uuid.UUID(user_id))
+        select(Room).where(Room.id == rid, Room.user_id == uid)
     )
     room = result.scalar_one_or_none()
 
