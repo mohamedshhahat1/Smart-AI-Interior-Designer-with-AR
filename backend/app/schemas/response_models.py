@@ -301,6 +301,98 @@ class LightingInsightsResponse(BaseModel):
     recommendations: list[str]
 
 
+# --- Feng Shui Analysis ---
+
+class BaguaZone(BaseModel):
+    zone: str
+    direction: str
+    element: str
+    life_area: str
+    colors: list[str]
+    status: str
+    score: float
+    enhancement: Optional[str] = None
+
+
+class ElementBalance(BaseModel):
+    element: str
+    current_level: float
+    ideal_level: float
+    status: str
+    associated_colors: list[str]
+    associated_shapes: list[str]
+    enhancement_items: list[str]
+
+
+class ChiFlowIssue(BaseModel):
+    issue_type: str
+    severity: str
+    location: str
+    description: str
+    impact: str
+
+
+class FengShuiCureResponse(BaseModel):
+    id: str
+    category: str
+    severity: str
+    issue_description: str
+    cure_description: str
+    element: Optional[str] = None
+    placement: Optional[str] = None
+    estimated_cost: Optional[float] = None
+    priority: int
+    is_applied: bool
+
+    class Config:
+        from_attributes = True
+
+
+class FurniturePlacementAdvice(BaseModel):
+    item: str
+    current_position: Optional[str] = None
+    recommended_position: str
+    reason: str
+    commanding_position: bool
+
+
+class FengShuiAnalysisResponse(BaseModel):
+    id: str
+    room_type: str
+    compass_direction: Optional[str] = None
+    overall_score: float
+    chi_flow_score: float
+    element_balance_score: float
+    yin_yang_score: float
+    clutter_score: float
+    commanding_position_score: float
+    score_interpretation: str
+    bagua_map: Optional[list[BaguaZone]] = None
+    element_analysis: Optional[list[ElementBalance]] = None
+    chi_flow_issues: Optional[list[ChiFlowIssue]] = None
+    cures: list[FengShuiCureResponse]
+    furniture_placement: Optional[list[FurniturePlacementAdvice]] = None
+    color_recommendations: Optional[dict] = None
+    lucky_directions: Optional[dict] = None
+    birth_element: Optional[str] = None
+    summary: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FengShuiCompatibilityResponse(BaseModel):
+    birth_year: int
+    kua_number: int
+    birth_element: str
+    lucky_directions: list[str]
+    unlucky_directions: list[str]
+    compatible_colors: list[str]
+    compatible_elements: list[str]
+    room_recommendations: dict
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None

@@ -183,3 +183,41 @@ class LightingFeedbackRequest(BaseModel):
 class SmartHomeExportRequest(BaseModel):
     scene_id: str
     platform: str = Field(..., examples=["philips_hue", "lifx", "homekit", "google_home", "alexa"])
+
+
+# --- Feng Shui Analysis ---
+
+class FengShuiAnalyzeRequest(BaseModel):
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    room_type: str = Field(..., examples=["living_room", "bedroom", "office", "kitchen"])
+    compass_direction: Optional[str] = Field(
+        None, examples=["north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest"]
+    )
+    detected_objects: Optional[list[dict]] = None
+    room_dimensions: Optional[dict] = None
+    birth_year: Optional[int] = Field(None, ge=1920, le=2026)
+    include_bagua: bool = Field(default=True)
+    include_element_analysis: bool = Field(default=True)
+
+
+class FengShuiApplyCureRequest(BaseModel):
+    analysis_id: str
+    cure_id: str
+
+
+class FengShuiRedesignRequest(BaseModel):
+    analysis_id: str
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    apply_cures: list[str] = Field(
+        default_factory=list, description="Cure IDs to apply in the redesign"
+    )
+    budget: Optional[float] = Field(None, ge=0)
+    preserve_existing: bool = Field(default=True)
+
+
+class FengShuiCompatibilityRequest(BaseModel):
+    birth_year: int = Field(..., ge=1920, le=2026)
+    room_type: str
+    compass_direction: Optional[str] = None
