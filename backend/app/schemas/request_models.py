@@ -221,3 +221,40 @@ class FengShuiCompatibilityRequest(BaseModel):
     birth_year: int = Field(..., ge=1920, le=2026)
     room_type: str
     compass_direction: Optional[str] = None
+
+
+# --- Seasonal & Holiday Themes ---
+
+class SeasonalThemeGenerateRequest(BaseModel):
+    theme_type: str = Field(..., examples=["season", "holiday"])
+    season: Optional[str] = Field(None, examples=["spring", "summer", "autumn", "winter"])
+    holiday: Optional[str] = Field(
+        None, examples=[
+            "christmas", "halloween", "easter", "valentines", "thanksgiving",
+            "eid", "diwali", "lunar_new_year", "hanukkah", "ramadan",
+            "new_year", "independence_day", "mothers_day",
+        ],
+    )
+    room_type: str = Field(default="living_room")
+    room_id: Optional[str] = None
+    design_id: Optional[str] = None
+    budget_tier: str = Field(default="medium", examples=["budget", "medium", "premium"])
+    base_style: Optional[str] = Field(None, examples=["scandinavian", "modern", "traditional"])
+    intensity: float = Field(default=0.7, ge=0.0, le=1.0, description="0=subtle hints, 1=full transformation")
+    include_diy: bool = Field(default=True)
+    include_scents: bool = Field(default=True)
+
+
+class SeasonalTransitionRequest(BaseModel):
+    from_theme_id: Optional[str] = None
+    to_season: Optional[str] = None
+    to_holiday: Optional[str] = None
+    room_type: str = Field(default="living_room")
+    gradual: bool = Field(default=True, description="Gradual transition vs complete swap")
+
+
+class AutoSeasonDetectRequest(BaseModel):
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    hemisphere: str = Field(default="northern", examples=["northern", "southern"])
+    include_upcoming_holidays: bool = Field(default=True)
+    days_ahead: int = Field(default=30, ge=0, le=90)

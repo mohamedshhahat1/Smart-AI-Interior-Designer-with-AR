@@ -393,6 +393,83 @@ class FengShuiCompatibilityResponse(BaseModel):
     room_recommendations: dict
 
 
+# --- Seasonal & Holiday Themes ---
+
+class DecorItem(BaseModel):
+    name: str
+    category: str
+    placement: str
+    estimated_cost: Optional[float] = None
+    reusable: bool = True
+    diy_possible: bool = False
+
+
+class DIYProject(BaseModel):
+    name: str
+    difficulty: str
+    time_minutes: int
+    materials: list[str]
+    instructions: str
+    estimated_cost: float
+
+
+class ScentRecommendation(BaseModel):
+    scent: str
+    method: str
+    placement: str
+    intensity: str
+
+
+class SeasonalThemeResponse(BaseModel):
+    id: str
+    theme_type: str
+    season: Optional[str] = None
+    holiday: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    color_palette: Optional[dict] = None
+    textures: Optional[list[str]] = None
+    materials: Optional[list[str]] = None
+    lighting_mood: Optional[str] = None
+    decor_items: Optional[list[DecorItem]] = None
+    diy_projects: Optional[list[DIYProject]] = None
+    scent_recommendations: Optional[list[ScentRecommendation]] = None
+    music_playlist_mood: Optional[str] = None
+    generated_image_url: Optional[str] = None
+    budget_tier: str
+    estimated_cost: Optional[float] = None
+    reusability_score: Optional[float] = None
+    transition_from: Optional[str] = None
+    transition_tips: Optional[list[str]] = None
+    is_favorite: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SeasonDetectResponse(BaseModel):
+    current_season: str
+    hemisphere: str
+    days_into_season: int
+    days_until_next_season: int
+    next_season: str
+    upcoming_holidays: list[dict]
+    recommended_theme: str
+    seasonal_mood: str
+
+
+class SeasonalTransitionResponse(BaseModel):
+    from_theme: Optional[str] = None
+    to_theme: str
+    transition_steps: list[dict]
+    items_to_keep: list[str]
+    items_to_add: list[str]
+    items_to_remove: list[str]
+    estimated_effort: str
+    estimated_cost: float
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None

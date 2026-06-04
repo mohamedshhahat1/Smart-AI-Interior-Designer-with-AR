@@ -5,10 +5,12 @@ from backend.app.models.furniture import Furniture
 from backend.app.models.house_project import HouseProject, HouseRoomDesign
 from backend.app.models.lighting import LightingScene, MoodProfile, LightingAnalytics
 from backend.app.models.feng_shui import FengShuiAnalysis, FengShuiCure
+from backend.app.models.seasonal_theme import SeasonalTheme
 
 __all__ = [
     "User", "Room", "Design", "Furniture",
     "HouseProject", "HouseRoomDesign",
     "LightingScene", "MoodProfile", "LightingAnalytics",
     "FengShuiAnalysis", "FengShuiCure",
+    "SeasonalTheme",
 ]
