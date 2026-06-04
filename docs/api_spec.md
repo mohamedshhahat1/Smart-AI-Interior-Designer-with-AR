@@ -667,6 +667,109 @@ Delete a saved theme.
 
 ---
 
+## Pet-Friendly Room Design Endpoints
+
+### POST /pet-friendly/profiles
+Create a pet profile.
+
+**Request Body:**
+```json
+{
+  "name": "Luna",
+  "species": "cat",
+  "breed": "Maine Coon",
+  "size": "large",
+  "age_years": 3,
+  "energy_level": "high",
+  "is_indoor": true,
+  "is_destructive": false,
+  "sheds_fur": true,
+  "climbs_furniture": true
+}
+```
+
+### GET /pet-friendly/profiles
+List all active pet profiles.
+
+### POST /pet-friendly/analyze
+Run a comprehensive pet-friendly room analysis.
+
+**Request Body:**
+```json
+{
+  "pet_profile_ids": ["uuid-1"],
+  "room_type": "living_room",
+  "include_products": true,
+  "budget": 500
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "room_type": "living_room",
+  "overall_score": 7.2,
+  "safety_score": 6.8,
+  "comfort_score": 7.5,
+  "durability_score": 6.5,
+  "cleanliness_score": 7.0,
+  "score_interpretation": "Good — pet-friendly with minor improvements possible",
+  "hazards": [
+    {
+      "hazard_type": "detected_item",
+      "severity": "high",
+      "item": "blinds cords",
+      "description": "Looping cords are a strangulation risk",
+      "solution": "Switch to cordless blinds or motorized window treatments",
+      "estimated_cost": 60.0
+    }
+  ],
+  "zone_plan": [
+    {
+      "zone_name": "Luna's Climbing",
+      "zone_type": "activity",
+      "location": "along walls, near windows, corner cat tree",
+      "description": "Vertical space with cat shelves, trees, and perches",
+      "items_needed": ["cat tree", "wall-mounted cat shelves", "sisal scratching post"],
+      "estimated_cost": 120.0
+    }
+  ],
+  "material_recommendations": [
+    {
+      "category": "upholstery",
+      "recommended": "Microfiber, tight-weave canvas, ultrasuede",
+      "avoid": "Leather (visible scratches), linen, chenille",
+      "reason": "Resists snagging from claws, easy to lint-roll"
+    }
+  ],
+  "plant_safety": {
+    "toxic": [{"plant": "Pothos", "severity": "moderate", "effect": "Oral irritation"}],
+    "safe_alternatives": [{"name": "Spider Plant", "benefit": "Air purifying, non-toxic"}]
+  },
+  "cleaning_tips": [
+    "Scoop litter box daily, full clean weekly",
+    "Vacuum upholstery 2x per week with pet-hair attachment"
+  ],
+  "product_recommendations": [
+    {
+      "name": "Multi-Level Cat Tree",
+      "category": "furniture",
+      "for_pet_type": "cat",
+      "description": "Floor-to-ceiling tree with platforms and sisal posts",
+      "price_range": "$60-$200",
+      "priority": "essential"
+    }
+  ],
+  "estimated_cost": 330.0
+}
+```
+
+### GET /pet-friendly/analyses
+List past pet-friendly analyses.
+
+---
+
 ## Error Responses
 
 All errors follow this format:

@@ -34,6 +34,56 @@ A mobile application that:
 | **Smart Lighting & Mood** | **AI-powered lighting that adapts to mood and circadian rhythm** | **Mood Analyzer, Scene Generator, Circadian Engine** |
 | **Feng Shui Analysis** | **AI-powered room harmony scoring with Five Elements and Bagua** | **Bagua Mapper, Element Analyzer, Chi Flow, Cure Recommender** |
 | **Seasonal & Holiday Themes** | **Transform rooms for every season and celebration with decor, DIY, scents** | **Season Detector, Theme Generator, Transition Planner** |
+| **Pet-Friendly Design** | **Safety audit, zone planning, and product recommendations for pet owners** | **Safety Analyzer, Zone Planner, Product Recommender** |
+
+## AI-Powered Pet-Friendly Room Design
+
+Design rooms that are safe, comfortable, and stylish for both you and your pets. The system analyzes your room for hazards, creates dedicated pet zones, recommends durable materials, and suggests the best pet products.
+
+### Supported Pets
+
+Dog, Cat, Bird, Rabbit (with species-specific safety rules, zones, materials, and products)
+
+### Analysis Dimensions
+
+| Dimension | Weight | What It Measures |
+|-----------|--------|------------------|
+| Safety | 35% | Toxic plants, hazardous items, electrical cords, room-specific dangers |
+| Comfort | 25% | Pet zones (sleeping, feeding, play), enrichment areas |
+| Durability | 20% | Scratch-resistant materials, chew-proof furniture |
+| Cleanliness | 20% | Fur management, litter tracking, easy-clean surfaces |
+
+### Features
+
+- **Safety Audit** — Detect 10 toxic plants, 8 hazardous items, and room-specific dangers (PTFE cookware for birds, recliner crush risk for cats)
+- **Pet Zone Planner** — Species-specific zones: Dog (4 zones), Cat (6 zones including climbing wall and litter area), Bird (2 zones), Rabbit (2 zones)
+- **Material Advisor** — Recommended vs avoid for flooring, upholstery, rugs, curtains per species
+- **Plant Safety** — 10 toxic plant database + 8 safe alternatives with benefits
+- **Cleaning Tips** — Species-specific maintenance routines (vacuuming, litter, cage cleaning)
+- **Product Recommendations** — Curated catalog of 30 pet products across 11 categories, priority-sorted (essential/recommended/optional)
+- **Behavioral Adaptation** — Adjusts recommendations based on pet traits (destructive, shedding, climbing, high energy)
+
+### Example
+
+```
+Pet: Luna (Cat, Medium, Indoor, Climbs Furniture, Sheds Fur)
+Room: Living Room | Safety Score: 7.2/10
+
+Hazards Found:
+  [HIGH] Blinds cords — strangulation risk → Switch to cordless blinds ($60)
+  [MED]  Essential oil diffuser — toxic to cats → Use pet-safe alternatives
+  [MED]  Tall unstable shelves — climbing risk → Secure with anti-tip straps ($25)
+
+Pet Zones:
+  1. Luna's Sleeping     — elevated shelf, warm sunny spot      $70
+  2. Luna's Climbing     — wall shelves + cat tree              $120
+  3. Luna's Scratching   — sisal post near sofa                $35
+  4. Luna's Window Perch — suction cup perch at sunniest window $25
+  5. Luna's Hiding       — cat cave under side table            $30
+  6. Luna's Litter       — enclosed box in bathroom corner      $50
+
+Materials: Use microfiber upholstery (avoid leather), low-pile rugs, short curtains
+```
 
 ## AI-Powered Seasonal & Holiday Room Themes
 
@@ -311,6 +361,11 @@ User Image → Room Analysis (YOLO + SAM)
 | GET | `/api/v1/seasonal/themes/{id}` | Get theme details |
 | POST | `/api/v1/seasonal/themes/{id}/favorite` | Toggle favorite |
 | DELETE | `/api/v1/seasonal/themes/{id}` | Delete theme |
+| POST | `/api/v1/pet-friendly/profiles` | Create pet profile |
+| GET | `/api/v1/pet-friendly/profiles` | List pet profiles |
+| GET | `/api/v1/pet-friendly/profiles/{id}` | Get pet profile |
+| POST | `/api/v1/pet-friendly/analyze` | Run pet-friendly room analysis |
+| GET | `/api/v1/pet-friendly/analyses` | List past analyses |
 
 ## Getting Started
 
