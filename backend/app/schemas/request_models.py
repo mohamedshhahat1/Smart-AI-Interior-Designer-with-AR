@@ -62,3 +62,51 @@ class AIAssistantRequest(BaseModel):
     room_id: str
     message: str = Field(..., max_length=1000)
     conversation_history: Optional[list[dict]] = None
+
+
+class RoomEntry(BaseModel):
+    room_label: str = Field(..., min_length=1, max_length=100, examples=["Master Bedroom"])
+    room_type: str = Field(..., min_length=2, max_length=50, examples=["bedroom"])
+    room_id: Optional[str] = Field(None, description="Existing room ID if already scanned")
+
+
+class HouseProjectCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=200, examples=["My Apartment Redesign"])
+    description: Optional[str] = Field(None, max_length=1000)
+    style: str = Field(..., min_length=2, max_length=50, examples=["scandinavian"])
+    rooms: list[RoomEntry] = Field(..., min_length=1, max_length=20)
+    budget: Optional[float] = Field(None, ge=0)
+    currency: str = Field(default="USD", max_length=3)
+    color_preferences: Optional[list[str]] = Field(
+        None, examples=[["white", "light blue", "natural oak"]]
+    )
+    material_preferences: Optional[list[str]] = Field(
+        None, examples=[["oak wood", "linen", "ceramic"]]
+    )
+    lighting_preference: Optional[str] = Field(
+        None, max_length=100, examples=["warm ambient lighting"]
+    )
+
+
+class HouseProjectGenerateRequest(BaseModel):
+    project_id: str
+    regenerate_rooms: Optional[list[str]] = Field(
+        None, description="Room IDs to regenerate; omit to generate all pending"
+    )
+    preserve_layout: bool = Field(default=True)
+
+
+class HouseProjectUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=200)
+    style: Optional[str] = Field(None, min_length=2, max_length=50)
+    budget: Optional[float] = Field(None, ge=0)
+    color_preferences: Optional[list[str]] = None
+    lighting_preference: Optional[str] = None
+
+
+class HouseRoomUpdateRequest(BaseModel):
+    room_design_id: str
+    instruction: str = Field(
+        ..., max_length=500,
+        examples=["Make this bedroom more cozy while keeping the house theme"]
+    )
