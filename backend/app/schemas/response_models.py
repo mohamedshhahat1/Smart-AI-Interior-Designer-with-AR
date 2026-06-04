@@ -470,6 +470,85 @@ class SeasonalTransitionResponse(BaseModel):
     estimated_cost: float
 
 
+# --- Pet-Friendly Design ---
+
+class PetProfileResponse(BaseModel):
+    id: str
+    name: str
+    species: str
+    breed: Optional[str] = None
+    size: str
+    age_years: Optional[float] = None
+    weight_kg: Optional[float] = None
+    energy_level: str
+    is_indoor: bool
+    is_destructive: bool
+    sheds_fur: bool
+    climbs_furniture: bool
+    has_allergies: bool
+    special_needs: Optional[list[str]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PetHazard(BaseModel):
+    hazard_type: str
+    severity: str
+    item: str
+    description: str
+    solution: str
+    estimated_cost: Optional[float] = None
+
+
+class PetZone(BaseModel):
+    zone_name: str
+    zone_type: str
+    location: str
+    description: str
+    items_needed: list[str]
+    estimated_cost: float
+
+
+class PetMaterialRecommendation(BaseModel):
+    category: str
+    recommended: str
+    avoid: str
+    reason: str
+
+
+class PetProductRecommendation(BaseModel):
+    name: str
+    category: str
+    for_pet_type: str
+    description: str
+    price_range: str
+    priority: str
+
+
+class PetFriendlyAnalysisResponse(BaseModel):
+    id: str
+    room_type: str
+    overall_score: float
+    safety_score: float
+    comfort_score: float
+    durability_score: float
+    cleanliness_score: float
+    score_interpretation: str
+    hazards: list[PetHazard]
+    zone_plan: list[PetZone]
+    material_recommendations: list[PetMaterialRecommendation]
+    plant_safety: Optional[dict] = None
+    cleaning_tips: list[str]
+    product_recommendations: Optional[list[PetProductRecommendation]] = None
+    estimated_cost: Optional[float] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None

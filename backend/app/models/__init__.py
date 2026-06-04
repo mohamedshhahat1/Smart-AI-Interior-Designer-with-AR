@@ -6,6 +6,7 @@ from backend.app.models.house_project import HouseProject, HouseRoomDesign
 from backend.app.models.lighting import LightingScene, MoodProfile, LightingAnalytics
 from backend.app.models.feng_shui import FengShuiAnalysis, FengShuiCure
 from backend.app.models.seasonal_theme import SeasonalTheme
+from backend.app.models.pet_friendly import PetProfile, PetFriendlyAnalysis
 
 __all__ = [
     "User", "Room", "Design", "Furniture",
@@ -13,4 +14,5 @@ __all__ = [
     "LightingScene", "MoodProfile", "LightingAnalytics",
     "FengShuiAnalysis", "FengShuiCure",
     "SeasonalTheme",
+    "PetProfile", "PetFriendlyAnalysis",
 ]

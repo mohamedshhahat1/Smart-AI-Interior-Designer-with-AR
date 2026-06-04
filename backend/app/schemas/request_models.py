@@ -258,3 +258,38 @@ class AutoSeasonDetectRequest(BaseModel):
     hemisphere: str = Field(default="northern", examples=["northern", "southern"])
     include_upcoming_holidays: bool = Field(default=True)
     days_ahead: int = Field(default=30, ge=0, le=90)
+
+
+# --- Pet-Friendly Design ---
+
+class PetProfileCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, examples=["Luna"])
+    species: str = Field(..., examples=["dog", "cat", "bird", "rabbit", "fish", "reptile"])
+    breed: Optional[str] = Field(None, examples=["Golden Retriever", "Maine Coon", "Budgerigar"])
+    size: str = Field(..., examples=["small", "medium", "large", "extra_large"])
+    age_years: Optional[float] = Field(None, ge=0, le=30)
+    weight_kg: Optional[float] = Field(None, ge=0)
+    energy_level: str = Field(default="medium", examples=["low", "medium", "high"])
+    is_indoor: bool = Field(default=True)
+    is_destructive: bool = Field(default=False)
+    sheds_fur: bool = Field(default=True)
+    climbs_furniture: bool = Field(default=False)
+    has_allergies: bool = Field(default=False)
+    special_needs: Optional[list[str]] = None
+    behavioral_notes: Optional[str] = Field(None, max_length=500)
+
+
+class PetFriendlyAnalyzeRequest(BaseModel):
+    pet_profile_ids: list[str] = Field(..., min_length=1, max_length=10)
+    room_type: str = Field(default="living_room")
+    room_id: Optional[str] = None
+    detected_objects: Optional[list[dict]] = None
+    include_products: bool = Field(default=True)
+    budget: Optional[float] = Field(None, ge=0)
+
+
+class PetZonePlanRequest(BaseModel):
+    pet_profile_ids: list[str] = Field(..., min_length=1)
+    room_type: str = Field(default="living_room")
+    room_dimensions: Optional[dict] = None
+    existing_furniture: Optional[list[str]] = None
