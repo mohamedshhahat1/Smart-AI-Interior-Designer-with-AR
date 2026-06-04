@@ -31,6 +31,38 @@ A mobile application that:
 | Cost Estimation | Calculate furniture, decoration, and labor costs | Budget optimization engine |
 | AI Design Assistant | Natural language commands for room redesign | OpenAI API / Google Gemini |
 | **Multi-Room House Design** | **Redesign entire homes with unified themes** | **Theme Unifier, Consistency Engine** |
+| **Smart Lighting & Mood** | **AI-powered lighting that adapts to mood and circadian rhythm** | **Mood Analyzer, Scene Generator, Circadian Engine** |
+
+## Smart Lighting Integration with Mood Detection
+
+AI-powered lighting system that detects your mood and generates optimal lighting scenes for any room.
+
+### Features
+
+- **Mood Detection** — Analyze mood from natural language, activity, time of day, and energy level
+- **10 Mood Profiles** — Relaxed, Focused, Energetic, Romantic, Cozy, Creative, Social, Sleepy, Refreshed, Melancholic
+- **Scene Generation** — Full lighting configuration with color temperature (1800K-6500K), brightness, fixtures, and zones
+- **Circadian Rhythm** — 13-phase daily schedule that follows your natural body clock with sunrise/sunset simulation
+- **Smart Home Export** — Export to Philips Hue, LIFX, HomeKit, Google Home, and Alexa
+- **Room-Aware** — Adjusts lighting based on room type (bedroom dims, kitchen brightens, office shifts cooler)
+- **Analytics & Learning** — Track usage patterns, mood distribution, and get personalized recommendations
+
+### Example Flow
+
+```
+User Input: "I want to relax after a long day" + evening + low energy
+    ↓
+Mood Analysis: relaxed (87% confidence), energy: 0.25, warmth: 0.75
+    ↓
+Lighting Scene:
+  Color Temperature: 2700K (warm amber)
+  Brightness: 40%
+  Fixtures: Floor lamp (35%), Table lamp (30%), LED strip (20%)
+  Transition: 2 seconds
+  Ambiance: "Soft golden glow with gentle shadows..."
+    ↓
+Export to Philips Hue / LIFX / HomeKit / Google Home / Alexa
+```
 
 ## Multi-Room House Design
 
@@ -163,6 +195,18 @@ User Image → Room Analysis (YOLO + SAM)
 | POST | `/api/v1/house/room/refine` | Refine individual room design |
 | GET | `/api/v1/house/project/{id}/cost` | Get house cost report |
 | DELETE | `/api/v1/house/project/{id}` | Delete house project |
+| POST | `/api/v1/lighting/detect-mood` | Detect mood and recommend lighting |
+| POST | `/api/v1/lighting/scenes` | Create lighting scene |
+| GET | `/api/v1/lighting/scenes` | List saved scenes |
+| GET | `/api/v1/lighting/scenes/{id}` | Get scene details |
+| PATCH | `/api/v1/lighting/scenes/{id}` | Update scene |
+| DELETE | `/api/v1/lighting/scenes/{id}` | Delete scene |
+| POST | `/api/v1/lighting/circadian` | Generate circadian schedule |
+| POST | `/api/v1/lighting/profiles` | Create mood profile |
+| GET | `/api/v1/lighting/profiles` | List mood profiles |
+| POST | `/api/v1/lighting/feedback` | Submit scene rating |
+| POST | `/api/v1/lighting/export` | Export to smart home platform |
+| GET | `/api/v1/lighting/insights` | Get lighting usage analytics |
 
 ## Getting Started
 

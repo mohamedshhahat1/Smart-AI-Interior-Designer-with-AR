@@ -322,6 +322,116 @@ Delete a house project and all associated room designs.
 
 ---
 
+## Smart Lighting & Mood Detection Endpoints
+
+### POST /lighting/detect-mood
+Detect user mood and generate a lighting recommendation.
+
+**Request Body:**
+```json
+{
+  "text_input": "I want to relax after a long day",
+  "time_of_day": "evening",
+  "activity": "relaxing",
+  "energy_level": 0.25,
+  "room_type": "living_room"
+}
+```
+
+**Response (200):**
+```json
+{
+  "mood_analysis": {
+    "detected_mood": "relaxed",
+    "confidence": 0.87,
+    "energy_level": 0.25,
+    "warmth_score": 0.75,
+    "suggested_moods": ["cozy", "sleepy", "melancholic"],
+    "analysis_source": "text+activity+time+energy"
+  },
+  "lighting_recommendation": {
+    "color_temperature": 2700,
+    "brightness": 0.40,
+    "color_hex": "#FFD699",
+    "saturation": 0.15,
+    "description": "Warm, dimmed lighting that creates a peaceful sanctuary",
+    "mood": "relaxed",
+    "time_of_day": "evening",
+    "fixtures": [
+      {"name": "Floor Lamp", "type": "ambient", "brightness": 0.35, "color_temperature": 2700, "position": "corner"},
+      {"name": "Table Lamp", "type": "accent", "brightness": 0.30, "color_temperature": 2700, "position": "side_table"}
+    ],
+    "zones": [
+      {"zone_name": "Primary Seating", "brightness": 0.40, "purpose": "Main relaxation area"},
+      {"zone_name": "Perimeter", "brightness": 0.15, "purpose": "Ambient glow around room edges"}
+    ],
+    "transition_duration": 2.0,
+    "ambiance_notes": "Soft golden glow with gentle shadows..."
+  },
+  "alternative_scenes": [
+    {"mood": "cozy", "color_temperature": 2500, "brightness": 0.35, "description": "Warm amber hygge lighting..."}
+  ],
+  "circadian_note": null
+}
+```
+
+### POST /lighting/scenes
+Save a lighting scene.
+
+### GET /lighting/scenes
+List saved scenes (optional `?mood=relaxed` filter).
+
+### PATCH /lighting/scenes/{id}
+Update scene parameters (color temp, brightness, favorite status).
+
+### POST /lighting/circadian
+Generate a 24-hour circadian rhythm schedule.
+
+**Request Body:**
+```json
+{
+  "wake_time": "07:00",
+  "sleep_time": "23:00",
+  "work_hours": ["09:00", "17:00"]
+}
+```
+
+**Response (200):**
+```json
+{
+  "schedule": [
+    {"time": "06:30", "phase": "dawn", "color_temp": 2200, "brightness": 0.15, "mood": "sleepy", "label": "Gentle Wake"},
+    {"time": "07:00", "phase": "sunrise", "color_temp": 3000, "brightness": 0.45, "mood": "refreshed", "label": "Sunrise Simulation"},
+    {"time": "09:00", "phase": "work_start", "color_temp": 5000, "brightness": 0.85, "mood": "focused", "label": "Work Mode"}
+  ],
+  "wake_time": "07:00",
+  "sleep_time": "23:00",
+  "total_transitions": 13,
+  "energy_savings_estimate": "Moderate savings (~20-30%)"
+}
+```
+
+### POST /lighting/export
+Export scene to smart home platform.
+
+**Request Body:**
+```json
+{
+  "scene_id": "uuid",
+  "platform": "philips_hue"
+}
+```
+
+**Response:** Platform-specific configuration with setup instructions and compatible devices list.
+
+### POST /lighting/feedback
+Submit scene feedback (rating 1-5) for ML improvement.
+
+### GET /lighting/insights
+Get personalized lighting usage analytics (mood distribution, averages, recommendations).
+
+---
+
 ## Error Responses
 
 All errors follow this format:
