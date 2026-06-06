@@ -33,7 +33,8 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _buildFeatureCard(
+                  Expanded(
+                      child: _buildFeatureCard(
                     context,
                     icon: Icons.auto_awesome,
                     title: 'AI Design',
@@ -42,7 +43,8 @@ class HomeScreen extends StatelessWidget {
                     onTap: () {},
                   )),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildFeatureCard(
+                  Expanded(
+                      child: _buildFeatureCard(
                     context,
                     icon: Icons.view_in_ar,
                     title: 'AR View',
@@ -55,7 +57,8 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: _buildFeatureCard(
+                  Expanded(
+                      child: _buildFeatureCard(
                     context,
                     icon: Icons.chair,
                     title: 'Furniture',
@@ -64,7 +67,8 @@ class HomeScreen extends StatelessWidget {
                     onTap: () {},
                   )),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildFeatureCard(
+                  Expanded(
+                      child: _buildFeatureCard(
                     context,
                     icon: Icons.calculate,
                     title: 'Cost',
@@ -144,7 +148,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Take a photo and let AI redesign your space',
-              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+              style:
+                  TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
             ),
             const SizedBox(height: 16),
             Container(
@@ -191,12 +196,16 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text(
                     'Multi-Room House Design',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Redesign your entire home with a unified theme',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -240,12 +249,16 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text(
                     'Smart Lighting & Mood',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'AI-powered lighting that adapts to your mood',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -285,16 +298,21 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.compass_calibration, color: Colors.white, size: 32),
+                  const Icon(Icons.compass_calibration,
+                      color: Colors.white, size: 32),
                   const SizedBox(height: 12),
                   const Text(
                     'Feng Shui Analysis',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Harmonize your space with ancient wisdom + AI',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -338,12 +356,16 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text(
                     'Seasonal & Holiday Themes',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Transform your room for every season and celebration',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -387,12 +409,16 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text(
                     'Pet-Friendly Design',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Design a safe, comfortable room for you and your pets',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -432,16 +458,20 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.three_d_rotation, color: Colors.white, size: 32),
+                  const Icon(Icons.view_in_ar, color: Colors.white, size: 32),
                   const SizedBox(height: 12),
                   const Text(
                     '3D Room Walkthrough',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Explore your redesigned room in interactive 3D',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -483,9 +513,12 @@ class HomeScreen extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 28),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+            Text(subtitle,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12)),
           ],
         ),
       ),

@@ -10,7 +10,8 @@ class Walkthrough3DScreen extends StatefulWidget {
   State<Walkthrough3DScreen> createState() => _Walkthrough3DScreenState();
 }
 
-class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTickerProviderStateMixin {
+class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedQuality = 'standard';
   String _selectedMethod = 'depth_estimation';
@@ -19,12 +20,33 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
   int _currentCameraIndex = 0;
   bool _isWalkthroughPlaying = false;
 
-  final _qualities = {'draft': 'Draft', 'standard': 'Standard', 'high': 'High', 'ultra': 'Ultra'};
+  final _qualities = {
+    'draft': 'Draft',
+    'standard': 'Standard',
+    'high': 'High',
+    'ultra': 'Ultra'
+  };
   final _methods = {
-    'depth_estimation': {'label': 'Depth Estimation', 'icon': Icons.layers, 'desc': 'Fast single-image 3D from depth map'},
-    'nerf': {'label': 'NeRF', 'icon': Icons.blur_circular, 'desc': 'Neural radiance field from multiple views'},
-    'gaussian_splatting': {'label': 'Gaussian Splatting', 'icon': Icons.grain, 'desc': 'Real-time 3D from point clouds'},
-    'multi_view': {'label': 'Multi-View Stereo', 'icon': Icons.view_carousel, 'desc': 'Classical reconstruction from image pairs'},
+    'depth_estimation': {
+      'label': 'Depth Estimation',
+      'icon': Icons.layers,
+      'desc': 'Fast single-image 3D from depth map'
+    },
+    'nerf': {
+      'label': 'NeRF',
+      'icon': Icons.blur_circular,
+      'desc': 'Neural radiance field from multiple views'
+    },
+    'gaussian_splatting': {
+      'label': 'Gaussian Splatting',
+      'icon': Icons.grain,
+      'desc': 'Real-time 3D from point clouds'
+    },
+    'multi_view': {
+      'label': 'Multi-View Stereo',
+      'icon': Icons.view_carousel,
+      'desc': 'Classical reconstruction from image pairs'
+    },
   };
 
   @override
@@ -59,7 +81,9 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
       });
     } catch (e) {
       setState(() => _isGenerating = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('3D generation failed')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('3D generation failed')));
     }
   }
 
@@ -75,7 +99,9 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
         ]),
       ),
       body: TabBarView(controller: _tabController, children: [
-        _buildGenerateTab(), _buildViewerTab(), _buildWalkthroughTab(),
+        _buildGenerateTab(),
+        _buildViewerTab(),
+        _buildWalkthroughTab(),
       ]),
     );
   }
@@ -84,52 +110,96 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Reconstruction Method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text('Reconstruction Method',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         ...(_methods.entries.map((e) {
           final isSelected = _selectedMethod == e.key;
-          return Padding(padding: const EdgeInsets.only(bottom: 8), child: GestureDetector(
-            onTap: () => setState(() => _selectedMethod = e.key),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primaryColor.withOpacity(0.08) : Colors.grey[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!, width: isSelected ? 2 : 1),
-              ),
-              child: Row(children: [
-                Icon(e.value['icon'] as IconData, color: isSelected ? AppTheme.primaryColor : Colors.grey, size: 28),
-                const SizedBox(width: 14),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(e.value['label'] as String, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? AppTheme.primaryColor : Colors.black87)),
-                  Text(e.value['desc'] as String, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                ])),
-                if (isSelected) const Icon(Icons.check_circle, color: AppTheme.primaryColor),
-              ]),
-            ),
-          ));
+          return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedMethod = e.key),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryColor.withOpacity(0.08)
+                        : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1),
+                  ),
+                  child: Row(children: [
+                    Icon(e.value['icon'] as IconData,
+                        color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                        size: 28),
+                    const SizedBox(width: 14),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(e.value['label'] as String,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected
+                                      ? AppTheme.primaryColor
+                                      : Colors.black87)),
+                          Text(e.value['desc'] as String,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600])),
+                        ])),
+                    if (isSelected)
+                      const Icon(Icons.check_circle,
+                          color: AppTheme.primaryColor),
+                  ]),
+                ),
+              ));
         })),
         const SizedBox(height: 24),
-        const Text('Quality Level', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text('Quality Level',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        Row(children: _qualities.entries.map((e) {
+        Row(
+            children: _qualities.entries.map((e) {
           final isSelected = _selectedQuality == e.key;
-          final icons = {'draft': Icons.speed, 'standard': Icons.tune, 'high': Icons.hd, 'ultra': Icons.four_k};
-          return Expanded(child: Padding(
+          final icons = {
+            'draft': Icons.speed,
+            'standard': Icons.tune,
+            'high': Icons.hd,
+            'ultra': Icons.four_k
+          };
+          return Expanded(
+              child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: GestureDetector(
               onTap: () => setState(() => _selectedQuality = e.key),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.secondaryColor.withOpacity(0.1) : Colors.grey[100],
+                  color: isSelected
+                      ? AppTheme.secondaryColor.withOpacity(0.1)
+                      : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isSelected ? AppTheme.secondaryColor : Colors.grey[300]!),
+                  border: Border.all(
+                      color: isSelected
+                          ? AppTheme.secondaryColor
+                          : Colors.grey[300]!),
                 ),
                 child: Column(children: [
-                  Icon(icons[e.key], color: isSelected ? AppTheme.secondaryColor : Colors.grey, size: 24),
+                  Icon(icons[e.key],
+                      color: isSelected ? AppTheme.secondaryColor : Colors.grey,
+                      size: 24),
                   const SizedBox(height: 6),
-                  Text(e.value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isSelected ? AppTheme.secondaryColor : Colors.grey[700])),
+                  Text(e.value,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? AppTheme.secondaryColor
+                              : Colors.grey[700])),
                 ]),
               ),
             ),
@@ -138,12 +208,25 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
         const SizedBox(height: 24),
         _buildInfoCard(),
         const SizedBox(height: 24),
-        SizedBox(width: double.infinity, child: ElevatedButton.icon(
-          onPressed: _isGenerating ? null : _generate,
-          icon: _isGenerating ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.three_d_rotation),
-          label: Text(_isGenerating ? 'Generating 3D Model...' : 'Generate 3D Room'),
-          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
-        )),
+        SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isGenerating ? null : _generate,
+              icon: _isGenerating
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.view_in_ar),
+              label: Text(_isGenerating
+                  ? 'Generating 3D Model...'
+                  : 'Generate 3D Room'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
+            )),
       ]),
     );
   }
@@ -159,52 +242,83 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: Colors.blue[50], borderRadius: BorderRadius.circular(12)),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _infoItem('Polygons', q['polys']!), _infoItem('Time', q['time']!), _infoItem('Size', q['size']!),
+        _infoItem('Polygons', q['polys']!),
+        _infoItem('Time', q['time']!),
+        _infoItem('Size', q['size']!),
       ]),
     );
   }
 
   Widget _infoItem(String label, String value) => Column(children: [
-    Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.primaryColor)),
-    Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-  ]);
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.primaryColor)),
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+      ]);
 
   Widget _buildViewerTab() {
-    if (_model == null) return _emptyState('Generate a 3D model first', Icons.view_in_ar);
+    if (_model == null)
+      return _emptyState('Generate a 3D model first', Icons.view_in_ar);
 
     return Column(children: [
       Expanded(
         child: Container(
           color: const Color(0xFF1A1A2E),
           child: Stack(children: [
-            Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.three_d_rotation, size: 80, color: Colors.white.withOpacity(0.3)),
-              const SizedBox(height: 16),
-              Text('3D Room Viewer', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 18)),
-              const SizedBox(height: 8),
-              Text('${_model!.polygonCount ?? 0} polygons • ${_model!.fileSizeMb?.toStringAsFixed(1) ?? "?"} MB',
-                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
-              if (_model!.processingTimeSeconds != null) ...[
-                const SizedBox(height: 4),
-                Text('Generated in ${_model!.processingTimeSeconds!.toStringAsFixed(1)}s',
-                  style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12)),
-              ],
-            ])),
-            Positioned(right: 12, top: 12, child: Column(children: [
-              _viewerButton(Icons.zoom_in, 'Zoom In'),
-              _viewerButton(Icons.zoom_out, 'Zoom Out'),
-              _viewerButton(Icons.rotate_left, 'Rotate'),
-              _viewerButton(Icons.grid_on, 'Grid'),
-              _viewerButton(Icons.light_mode, 'Lighting'),
-            ])),
+            Center(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                  Icon(Icons.view_in_ar,
+                      size: 80, color: Colors.white.withOpacity(0.3)),
+                  const SizedBox(height: 16),
+                  Text('3D Room Viewer',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.6), fontSize: 18)),
+                  const SizedBox(height: 8),
+                  Text(
+                      '${_model!.polygonCount ?? 0} polygons • ${_model!.fileSizeMb?.toStringAsFixed(1) ?? "?"} MB',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.4), fontSize: 13)),
+                  if (_model!.processingTimeSeconds != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                        'Generated in ${_model!.processingTimeSeconds!.toStringAsFixed(1)}s',
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 12)),
+                  ],
+                ])),
+            Positioned(
+                right: 12,
+                top: 12,
+                child: Column(children: [
+                  _viewerButton(Icons.zoom_in, 'Zoom In'),
+                  _viewerButton(Icons.zoom_out, 'Zoom Out'),
+                  _viewerButton(Icons.rotate_left, 'Rotate'),
+                  _viewerButton(Icons.grid_on, 'Grid'),
+                  _viewerButton(Icons.light_mode, 'Lighting'),
+                ])),
             if (_model!.furnitureObjects != null)
-              Positioned(left: 12, bottom: 12, child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                child: Text('${_model!.furnitureObjects!.length} objects placed', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              )),
+              Positioned(
+                  left: 12,
+                  bottom: 12,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                        '${_model!.furnitureObjects!.length} objects placed',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12)),
+                  )),
           ]),
         ),
       ),
@@ -213,98 +327,151 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen> with SingleTi
   }
 
   Widget _viewerButton(IconData icon, String tooltip) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Tooltip(message: tooltip, child: Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-      child: Icon(icon, color: Colors.white, size: 20),
-    )),
-  );
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Tooltip(
+            message: tooltip,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: Colors.white, size: 20),
+            )),
+      );
 
   Widget _buildCameraBar() {
     return Container(
       padding: const EdgeInsets.all(12),
       color: Colors.grey[100],
       child: Column(children: [
-        const Text('Camera Positions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const Text('Camera Positions',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 8),
-        SizedBox(height: 40, child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: _model!.cameraPositions!.length,
-          itemBuilder: (ctx, i) {
-            final cam = _model!.cameraPositions![i];
-            final isSelected = _currentCameraIndex == i;
-            return Padding(padding: const EdgeInsets.only(right: 8), child: ChoiceChip(
-              label: Text(cam.label, style: const TextStyle(fontSize: 11)),
-              selected: isSelected,
-              onSelected: (_) => setState(() => _currentCameraIndex = i),
-              selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-            ));
-          },
-        )),
+        SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _model!.cameraPositions!.length,
+              itemBuilder: (ctx, i) {
+                final cam = _model!.cameraPositions![i];
+                final isSelected = _currentCameraIndex == i;
+                return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label:
+                          Text(cam.label, style: const TextStyle(fontSize: 11)),
+                      selected: isSelected,
+                      onSelected: (_) =>
+                          setState(() => _currentCameraIndex = i),
+                      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+                    ));
+              },
+            )),
       ]),
     );
   }
 
   Widget _buildWalkthroughTab() {
-    if (_model == null || _model!.walkthroughPath == null) return _emptyState('Generate a model with walkthrough enabled', Icons.route);
+    if (_model == null || _model!.walkthroughPath == null)
+      return _emptyState(
+          'Generate a model with walkthrough enabled', Icons.route);
 
-    return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        width: double.infinity, padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1A1A2E), Color(0xFF16213E)]), borderRadius: BorderRadius.circular(20)),
-        child: Column(children: [
-          const Icon(Icons.route, color: Colors.white, size: 40),
+    return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)]),
+                borderRadius: BorderRadius.circular(20)),
+            child: Column(children: [
+              const Icon(Icons.route, color: Colors.white, size: 40),
+              const SizedBox(height: 12),
+              const Text('Interactive Walkthrough',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(
+                  '${_model!.walkthroughPath!.length} waypoints • ${_totalDuration().toStringAsFixed(0)}s total',
+                  style: TextStyle(color: Colors.white.withOpacity(0.7))),
+              const SizedBox(height: 16),
+              SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => setState(
+                        () => _isWalkthroughPlaying = !_isWalkthroughPlaying),
+                    icon: Icon(
+                        _isWalkthroughPlaying ? Icons.pause : Icons.play_arrow),
+                    label: Text(_isWalkthroughPlaying
+                        ? 'Pause Walkthrough'
+                        : 'Start Walkthrough'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1A1A2E)),
+                  )),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          const Text('Walkthrough Path',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          const Text('Interactive Walkthrough', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('${_model!.walkthroughPath!.length} waypoints • ${_totalDuration().toStringAsFixed(0)}s total',
-            style: TextStyle(color: Colors.white.withOpacity(0.7))),
+          ...List.generate(_model!.walkthroughPath!.length, (i) {
+            final point = _model!.walkthroughPath![i];
+            return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    child: Text('${i + 1}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor)),
+                  ),
+                  title: Text('Waypoint ${i + 1}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    'Pos: (${point.position['x']?.toStringAsFixed(1)}, ${point.position['y']?.toStringAsFixed(1)}, ${point.position['z']?.toStringAsFixed(1)}) • ${point.durationSeconds.toStringAsFixed(1)}s • ${point.easing.replaceAll('_', ' ')}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.videocam, color: Colors.grey),
+                ));
+          }),
           const SizedBox(height: 16),
-          SizedBox(width: double.infinity, child: ElevatedButton.icon(
-            onPressed: () => setState(() => _isWalkthroughPlaying = !_isWalkthroughPlaying),
-            icon: Icon(_isWalkthroughPlaying ? Icons.pause : Icons.play_arrow),
-            label: Text(_isWalkthroughPlaying ? 'Pause Walkthrough' : 'Start Walkthrough'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF1A1A2E)),
-          )),
-        ]),
-      ),
-      const SizedBox(height: 20),
-      const Text('Walkthrough Path', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 12),
-      ...List.generate(_model!.walkthroughPath!.length, (i) {
-        final point = _model!.walkthroughPath![i];
-        return Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-            child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          ),
-          title: Text('Waypoint ${i + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text(
-            'Pos: (${point.position['x']?.toStringAsFixed(1)}, ${point.position['y']?.toStringAsFixed(1)}, ${point.position['z']?.toStringAsFixed(1)}) • ${point.durationSeconds.toStringAsFixed(1)}s • ${point.easing.replaceAll('_', ' ')}',
-            style: const TextStyle(fontSize: 12),
-          ),
-          trailing: const Icon(Icons.videocam, color: Colors.grey),
-        ));
-      }),
-      const SizedBox(height: 16),
-      if (_model!.furnitureObjects != null) ...[
-        Text('Scene Objects (${_model!.furnitureObjects!.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        ..._model!.furnitureObjects!.map((f) => Card(child: ListTile(
-          leading: CircleAvatar(backgroundColor: AppTheme.accentColor.withOpacity(0.1), child: const Icon(Icons.chair, color: AppTheme.accentColor, size: 18)),
-          title: Text(f.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          subtitle: Text('${f.category} • ${f.material ?? "default"}', style: const TextStyle(fontSize: 12)),
-          trailing: Text('(${f.position['x']?.toStringAsFixed(1)}, ${f.position['z']?.toStringAsFixed(1)})', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-        ))),
-      ],
-    ]));
+          if (_model!.furnitureObjects != null) ...[
+            Text('Scene Objects (${_model!.furnitureObjects!.length})',
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ..._model!.furnitureObjects!.map((f) => Card(
+                    child: ListTile(
+                  leading: CircleAvatar(
+                      backgroundColor: AppTheme.accentColor.withOpacity(0.1),
+                      child: const Icon(Icons.chair,
+                          color: AppTheme.accentColor, size: 18)),
+                  title: Text(f.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('${f.category} • ${f.material ?? "default"}',
+                      style: const TextStyle(fontSize: 12)),
+                  trailing: Text(
+                      '(${f.position['x']?.toStringAsFixed(1)}, ${f.position['z']?.toStringAsFixed(1)})',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+                ))),
+          ],
+        ]));
   }
 
-  double _totalDuration() => _model!.walkthroughPath!.fold(0.0, (sum, p) => sum + p.durationSeconds);
+  double _totalDuration() =>
+      _model!.walkthroughPath!.fold(0.0, (sum, p) => sum + p.durationSeconds);
 
-  Widget _emptyState(String msg, IconData icon) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-    Icon(icon, size: 64, color: Colors.grey[300]), const SizedBox(height: 16),
-    Text(msg, style: TextStyle(color: Colors.grey[500], fontSize: 16)),
-  ]));
+  Widget _emptyState(String msg, IconData icon) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, size: 64, color: Colors.grey[300]),
+        const SizedBox(height: 16),
+        Text(msg, style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+      ]));
 }

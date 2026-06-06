@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
 import 'package:smart_interior_ai/data/models/room_model.dart';
@@ -8,7 +9,8 @@ import 'package:smart_interior_ai/data/models/furniture_model.dart';
 class ApiService {
   final Dio _dio = ApiClient().dio;
 
-  Future<Map<String, dynamic>> register(String name, String email, String password) async {
+  Future<Map<String, dynamic>> register(
+      String name, String email, String password) async {
     final response = await _dio.post('/auth/register', data: {
       'name': name,
       'email': email,
@@ -31,6 +33,14 @@ class ApiService {
         imageFile.path,
         filename: imageFile.path.split('/').last,
       ),
+    });
+    final response = await _dio.post('/room/upload', data: formData);
+    return RoomModel.fromJson(response.data);
+  }
+
+  Future<RoomModel> uploadRoomBytes(Uint8List bytes, String filename) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
     });
     final response = await _dio.post('/room/upload', data: formData);
     return RoomModel.fromJson(response.data);

@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from backend.app.models.lighting import LightingScene
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/constants/app_constants.dart';
-import 'package:smart_interior_ai/data/services/api_service.dart';
+import 'package:smart_interior_ai/core/utils/api_client.dart';
 
 class HouseProjectScreen extends StatefulWidget {
   const HouseProjectScreen({super.key});
@@ -16,7 +16,7 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _budgetController = TextEditingController();
-  final _apiService = ApiService();
+  final _apiClient = ApiClient();
 
   String _selectedStyle = 'scandinavian';
   String _lightingPreference = 'Warm ambient lighting';
@@ -25,9 +25,21 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
   bool _isCreating = false;
 
   final List<String> _availableColors = [
-    'White', 'Light Blue', 'Natural Oak', 'Cream', 'Sage Green',
-    'Charcoal', 'Terracotta', 'Navy', 'Blush Pink', 'Forest Green',
-    'Gold', 'Slate Grey', 'Warm Beige', 'Dusty Rose', 'Olive',
+    'White',
+    'Light Blue',
+    'Natural Oak',
+    'Cream',
+    'Sage Green',
+    'Charcoal',
+    'Terracotta',
+    'Navy',
+    'Blush Pink',
+    'Forest Green',
+    'Gold',
+    'Slate Grey',
+    'Warm Beige',
+    'Dusty Rose',
+    'Olive',
   ];
 
   final List<String> _lightingOptions = [
@@ -59,7 +71,8 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                decoration: const InputDecoration(labelText: 'Room Name', hintText: 'e.g. Master Bedroom'),
+                decoration: const InputDecoration(
+                    labelText: 'Room Name', hintText: 'e.g. Master Bedroom'),
                 onChanged: (v) => roomLabel = v,
               ),
               const SizedBox(height: 12),
@@ -67,11 +80,13 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                 value: roomType,
                 decoration: const InputDecoration(labelText: 'Room Type'),
                 items: const [
-                  DropdownMenuItem(value: 'living_room', child: Text('Living Room')),
+                  DropdownMenuItem(
+                      value: 'living_room', child: Text('Living Room')),
                   DropdownMenuItem(value: 'bedroom', child: Text('Bedroom')),
                   DropdownMenuItem(value: 'kitchen', child: Text('Kitchen')),
                   DropdownMenuItem(value: 'bathroom', child: Text('Bathroom')),
-                  DropdownMenuItem(value: 'dining_room', child: Text('Dining Room')),
+                  DropdownMenuItem(
+                      value: 'dining_room', child: Text('Dining Room')),
                   DropdownMenuItem(value: 'office', child: Text('Office')),
                   DropdownMenuItem(value: 'hallway', child: Text('Hallway')),
                   DropdownMenuItem(value: 'studio', child: Text('Studio')),
@@ -81,12 +96,15 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
                 if (roomLabel.isNotEmpty) {
                   setState(() {
-                    _rooms.add({'room_label': roomLabel, 'room_type': roomType});
+                    _rooms
+                        .add({'room_label': roomLabel, 'room_type': roomType});
                   });
                   Navigator.pop(ctx);
                 }
@@ -111,20 +129,23 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
     setState(() => _isCreating = true);
 
     try {
-      final dio = _apiService;
-      final response = await ApiService().dio.post('/house/project', data: {
+      final response = await _apiClient.dio.post('/house/project', data: {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
         'style': _selectedStyle,
-        'rooms': _rooms.map((r) => {
-          return {'room_label': r['room_label'], 'room_type': r['room_type']};
-        }).toList(),
+        'rooms': _rooms
+            .map((r) => {
+                  'room_label': r['room_label'],
+                  'room_type': r['room_type'],
+                })
+            .toList(),
         'budget': _budgetController.text.isNotEmpty
             ? double.tryParse(_budgetController.text)
             : null,
-        'color_preferences': _selectedColors.isNotEmpty ? _selectedColors : null,
+        'color_preferences':
+            _selectedColors.isNotEmpty ? _selectedColors : null,
         'lighting_preference': _lightingPreference,
       });
 
@@ -163,7 +184,8 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                   hintText: 'e.g. My Apartment Redesign',
                   prefixIcon: Icon(Icons.home),
                 ),
-                validator: (v) => v != null && v.length >= 2 ? null : 'Enter a project name',
+                validator: (v) =>
+                    v != null && v.length >= 2 ? null : 'Enter a project name',
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -186,28 +208,31 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
               _buildSectionHeader('Design Style'),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: AppConstants.supportedStyles.map((style) {
-                  final styleKey = style.toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
+                  final styleKey = style
+                      .toLowerCase()
+                      .replaceAll(' ', '_')
+                      .replaceAll('-', '_');
                   final isSelected = _selectedStyle == styleKey;
                   return ChoiceChip(
                     label: Text(style),
                     selected: isSelected,
-                    onSelected: (_) => setState(() => _selectedStyle = styleKey),
+                    onSelected: (_) =>
+                        setState(() => _selectedStyle = styleKey),
                     selectedColor: AppTheme.primaryColor.withOpacity(0.2),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 24),
-
               _buildSectionHeader('Color Preferences'),
               const SizedBox(height: 8),
-              Text('Select colors for your unified palette', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              Text('Select colors for your unified palette',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -232,7 +257,6 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 24),
-
               _buildSectionHeader('Lighting'),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -240,13 +264,15 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.light),
                 ),
-                items: _lightingOptions.map((opt) =>
-                  DropdownMenuItem(value: opt, child: Text(opt)),
-                ).toList(),
-                onChanged: (v) => setState(() => _lightingPreference = v ?? _lightingPreference),
+                items: _lightingOptions
+                    .map(
+                      (opt) => DropdownMenuItem(value: opt, child: Text(opt)),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(
+                    () => _lightingPreference = v ?? _lightingPreference),
               ),
               const SizedBox(height: 24),
-
               _buildSectionHeader('Rooms (${_rooms.length})'),
               const SizedBox(height: 12),
               if (_rooms.isEmpty)
@@ -256,13 +282,16 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                    border: Border.all(
+                        color: Colors.grey[300]!, style: BorderStyle.solid),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.meeting_room, size: 40, color: Colors.grey[400]),
+                      Icon(Icons.meeting_room,
+                          size: 40, color: Colors.grey[400]),
                       const SizedBox(height: 8),
-                      Text('No rooms added yet', style: TextStyle(color: Colors.grey[500])),
+                      Text('No rooms added yet',
+                          style: TextStyle(color: Colors.grey[500])),
                     ],
                   ),
                 )
@@ -273,12 +302,16 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                        child: Text('${i + 1}', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+                        child: Text('${i + 1}',
+                            style: const TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.bold)),
                       ),
                       title: Text(room['room_label']!),
                       subtitle: Text(room['room_type']!.replaceAll('_', ' ')),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
                         onPressed: () => setState(() => _rooms.removeAt(i)),
                       ),
                     ),
@@ -291,11 +324,11 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                   onPressed: _addRoom,
                   icon: const Icon(Icons.add),
                   label: const Text('Add Room'),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                  style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14)),
                 ),
               ),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -309,12 +342,18 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                       ? const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                            SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white)),
                             SizedBox(width: 12),
                             Text('Creating Project...'),
                           ],
                         )
-                      : const Text('Create House Project', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      : const Text('Create House Project',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -326,6 +365,7 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
+    return Text(title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
   }
 }
