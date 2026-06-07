@@ -194,8 +194,10 @@ class ApiService {
     return response.data;
   }
 
-  Future<List<DesignModel>> listDesigns() async {
-    final response = await _dio.get('/design/');
+  Future<List<DesignModel>> listDesigns({String? roomId}) async {
+    final queryParams = <String, dynamic>{};
+    if (roomId != null) queryParams['room_id'] = roomId;
+    final response = await _dio.get('/design/', queryParameters: queryParams);
     return (response.data as List).map((e) => DesignModel.fromJson(e)).toList();
   }
 

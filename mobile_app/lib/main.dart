@@ -48,6 +48,7 @@ final _router = GoRouter(
       path: '/design/:roomId',
       builder: (context, state) => DesignResultScreen(
         roomId: state.pathParameters['roomId']!,
+        style: state.uri.queryParameters['style'],
       ),
     ),
     GoRoute(

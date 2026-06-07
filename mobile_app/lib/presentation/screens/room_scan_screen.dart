@@ -70,7 +70,10 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
       );
 
       if (mounted) {
-        context.go('/design/${room.id}');
+        final stylePath = _selectedStyle != null
+            ? '/design/${room.id}?style=${Uri.encodeComponent(_selectedStyle!)}'
+            : '/design/${room.id}';
+        context.go(stylePath);
       }
     } catch (e, stackTrace) {
       debugPrint('Room upload error: $e');

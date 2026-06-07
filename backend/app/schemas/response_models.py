@@ -41,7 +41,7 @@ class RoomResponse(BaseModel):
     image_url: str
     room_type: Optional[str] = None
     area: Optional[float] = None
-    detected_objects: Optional[dict] = None
+    detected_objects: Optional[list] = None
     created_at: datetime
 
     class Config:
@@ -55,7 +55,7 @@ class DesignResponse(BaseModel):
     prompt: Optional[str] = None
     generated_image_url: Optional[str] = None
     color_palette: Optional[dict] = None
-    furniture_list: Optional[dict] = None
+    furniture_list: Optional[list] = None
     estimated_cost: Optional[float] = None
     cost_breakdown: Optional[dict] = None
     created_at: datetime

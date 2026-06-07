@@ -25,7 +25,7 @@ router = APIRouter(prefix="/design", tags=["Design"])
 @limiter.limit("20/minute")
 async def generate_design(
     request: Request,
-    body: DesignGenerateRequest = Depends(),
+    body: DesignGenerateRequest,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
@@ -141,6 +141,39 @@ async def enhance_design(
         cost_breakdown=design.cost_breakdown,
         created_at=design.created_at,
     )
+
+
+@router.get("/", response_model=list[DesignResponse])
+async def list_designs(
+    room_id: str = None,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    query = (
+        select(Design)
+        .join(Room, Design.room_id == Room.id)
+        .where(Room.user_id == uuid.UUID(user_id))
+    )
+    if room_id:
+        query = query.where(Design.room_id == uuid.UUID(room_id))
+    query = query.order_by(Design.created_at.desc())
+    result = await db.execute(query)
+    designs = result.scalars().all()
+    return [
+        DesignResponse(
+            id=str(d.id),
+            room_id=str(d.room_id),
+            style=d.style,
+            prompt=d.prompt,
+            generated_image_url=d.generated_image_url,
+            color_palette=d.color_palette,
+            furniture_list=d.furniture_list,
+            estimated_cost=d.estimated_cost,
+            cost_breakdown=d.cost_breakdown,
+            created_at=d.created_at,
+        )
+        for d in designs
+    ]
 
 
 @router.get("/{design_id}", response_model=DesignResponse)
