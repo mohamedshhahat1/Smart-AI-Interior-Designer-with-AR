@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/constants/app_constants.dart';
+import 'package:smart_interior_ai/core/utils/api_client.dart';
 import 'package:smart_interior_ai/presentation/screens/home_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/login_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/register_screen.dart';
@@ -18,6 +19,7 @@ import 'package:smart_interior_ai/presentation/screens/feng_shui_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/seasonal_theme_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/pet_friendly_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/walkthrough_3d_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -25,8 +27,18 @@ void main() {
   runApp(const ProviderScope(child: SmartInteriorApp()));
 }
 
+const _publicRoutes = ['/login', '/register'];
+
 final _router = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) async {
+    final isLoggedIn = await ApiClient().hasToken();
+    final isPublicRoute = _publicRoutes.contains(state.matchedLocation);
+
+    if (!isLoggedIn && !isPublicRoute) return '/login';
+    if (isLoggedIn && isPublicRoute) return '/';
+    return null;
+  },
   routes: [
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
@@ -74,6 +86,7 @@ final _router = GoRouter(
     GoRoute(path: '/seasonal', builder: (context, state) => const SeasonalThemeScreen()),
     GoRoute(path: '/pet-friendly', builder: (context, state) => const PetFriendlyScreen()),
     GoRoute(path: '/3d-walkthrough', builder: (context, state) => const Walkthrough3DScreen()),
+    GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
   ],
 );
 

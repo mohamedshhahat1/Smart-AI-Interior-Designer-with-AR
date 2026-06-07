@@ -61,9 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _openAssistantPicker();
         break;
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile coming soon')),
-        );
+        context.go('/profile');
         break;
     }
   }
