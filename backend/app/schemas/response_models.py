@@ -39,9 +39,9 @@ class RoomResponse(BaseModel):
     id: str
     user_id: str
     image_url: str
-    room_type: Optional[str] = None
+    room_type: str = "unknown"
     area: Optional[float] = None
-    detected_objects: Optional[list] = None
+    detected_objects: list = []
     created_at: datetime
 
     class Config:
@@ -51,13 +51,13 @@ class RoomResponse(BaseModel):
 class DesignResponse(BaseModel):
     id: str
     room_id: str
-    style: Optional[str] = None
+    style: str
     prompt: Optional[str] = None
     generated_image_url: Optional[str] = None
     color_palette: Optional[dict] = None
-    furniture_list: Optional[list] = None
-    estimated_cost: Optional[float] = None
-    cost_breakdown: Optional[dict] = None
+    furniture_list: list = []
+    estimated_cost: float = 0.0
+    cost_breakdown: dict = {}
     created_at: datetime
 
     class Config:

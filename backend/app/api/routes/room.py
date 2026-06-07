@@ -69,15 +69,7 @@ async def upload_room(
     db.add(room)
     await db.flush()
 
-    return RoomResponse(
-        id=str(room.id),
-        user_id=str(room.user_id),
-        image_url=room.image_url,
-        room_type=room.room_type,
-        area=room.area,
-        detected_objects=room.detected_objects,
-        created_at=room.created_at,
-    )
+    return _room_to_response(room)
 
 
 @router.get("/{room_id}", response_model=RoomResponse)
@@ -103,15 +95,7 @@ async def get_room(
             detail="Room not found",
         )
 
-    return RoomResponse(
-        id=str(room.id),
-        user_id=str(room.user_id),
-        image_url=room.image_url,
-        room_type=room.room_type,
-        area=room.area,
-        detected_objects=room.detected_objects,
-        created_at=room.created_at,
-    )
+    return _room_to_response(room)
 
 
 @router.get("/", response_model=list[RoomResponse])
@@ -124,15 +108,16 @@ async def list_rooms(
     )
     rooms = result.scalars().all()
 
-    return [
-        RoomResponse(
-            id=str(room.id),
-            user_id=str(room.user_id),
-            image_url=room.image_url,
-            room_type=room.room_type,
-            area=room.area,
-            detected_objects=room.detected_objects,
-            created_at=room.created_at,
-        )
-        for room in rooms
-    ]
+    return [_room_to_response(room) for room in rooms]
+
+
+def _room_to_response(room: Room) -> RoomResponse:
+    return RoomResponse(
+        id=str(room.id),
+        user_id=str(room.user_id),
+        image_url=room.image_url,
+        room_type=room.room_type or "unknown",
+        area=room.area,
+        detected_objects=room.detected_objects or [],
+        created_at=room.created_at,
+    )

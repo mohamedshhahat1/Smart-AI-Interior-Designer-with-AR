@@ -84,18 +84,7 @@ async def generate_design(
     db.add(design)
     await db.flush()
 
-    return DesignResponse(
-        id=str(design.id),
-        room_id=str(design.room_id),
-        style=design.style,
-        prompt=design.prompt,
-        generated_image_url=design.generated_image_url,
-        color_palette=design.color_palette,
-        furniture_list=design.furniture_list,
-        estimated_cost=design.estimated_cost,
-        cost_breakdown=design.cost_breakdown,
-        created_at=design.created_at,
-    )
+    return _design_to_response(design)
 
 
 @router.post("/enhance", response_model=DesignResponse)
@@ -129,18 +118,7 @@ async def enhance_design(
     design.color_palette = enhanced.get("color_palette", design.color_palette)
     await db.flush()
 
-    return DesignResponse(
-        id=str(design.id),
-        room_id=str(design.room_id),
-        style=design.style,
-        prompt=design.prompt,
-        generated_image_url=design.generated_image_url,
-        color_palette=design.color_palette,
-        furniture_list=design.furniture_list,
-        estimated_cost=design.estimated_cost,
-        cost_breakdown=design.cost_breakdown,
-        created_at=design.created_at,
-    )
+    return _design_to_response(design)
 
 
 @router.get("/", response_model=list[DesignResponse])
@@ -159,21 +137,7 @@ async def list_designs(
     query = query.order_by(Design.created_at.desc())
     result = await db.execute(query)
     designs = result.scalars().all()
-    return [
-        DesignResponse(
-            id=str(d.id),
-            room_id=str(d.room_id),
-            style=d.style,
-            prompt=d.prompt,
-            generated_image_url=d.generated_image_url,
-            color_palette=d.color_palette,
-            furniture_list=d.furniture_list,
-            estimated_cost=d.estimated_cost,
-            cost_breakdown=d.cost_breakdown,
-            created_at=d.created_at,
-        )
-        for d in designs
-    ]
+    return [_design_to_response(d) for d in designs]
 
 
 @router.get("/{design_id}", response_model=DesignResponse)
@@ -193,15 +157,19 @@ async def get_design(
     if not room_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    return _design_to_response(design)
+
+
+def _design_to_response(design: Design) -> DesignResponse:
     return DesignResponse(
         id=str(design.id),
         room_id=str(design.room_id),
-        style=design.style,
+        style=design.style or "modern",
         prompt=design.prompt,
         generated_image_url=design.generated_image_url,
         color_palette=design.color_palette,
-        furniture_list=design.furniture_list,
-        estimated_cost=design.estimated_cost,
-        cost_breakdown=design.cost_breakdown,
+        furniture_list=design.furniture_list or [],
+        estimated_cost=design.estimated_cost or 0.0,
+        cost_breakdown=design.cost_breakdown or {},
         created_at=design.created_at,
     )
