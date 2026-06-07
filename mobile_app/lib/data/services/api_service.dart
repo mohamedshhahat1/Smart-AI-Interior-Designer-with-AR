@@ -111,4 +111,91 @@ class ApiService {
     });
     return response.data;
   }
+
+  Future<Map<String, dynamic>> chatWithAssistant({
+    required String roomId,
+    required String message,
+    List<Map<String, String>>? conversationHistory,
+  }) async {
+    final response = await _dio.post('/assistant/chat', data: {
+      'room_id': roomId,
+      'message': message,
+      'conversation_history': conversationHistory,
+    });
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> generateCircadianSchedule({
+    String wakeTime = '07:00',
+    String sleepTime = '23:00',
+    List<String>? workHours,
+  }) async {
+    final response = await _dio.post('/lighting/circadian', data: {
+      'wake_time': wakeTime,
+      'sleep_time': sleepTime,
+      'work_hours': workHours,
+    });
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> saveLightingScene({
+    required String name,
+    required String mood,
+    required int colorTemperature,
+    required double brightness,
+    String? colorHex,
+    double saturation = 0.0,
+    List<Map<String, dynamic>>? fixtures,
+    List<Map<String, dynamic>>? zones,
+    double transitionDuration = 2.0,
+    String? timeOfDay,
+    String? activity,
+  }) async {
+    final response = await _dio.post('/lighting/scenes', data: {
+      'name': name,
+      'mood': mood,
+      'color_temperature': colorTemperature,
+      'brightness': brightness,
+      'color_hex': colorHex,
+      'saturation': saturation,
+      'fixtures': fixtures,
+      'zones': zones,
+      'transition_duration': transitionDuration,
+      'time_of_day': timeOfDay,
+      'activity': activity,
+    });
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> exportToSmartHome({
+    required String sceneId,
+    required String platform,
+  }) async {
+    final response = await _dio.post('/lighting/export', data: {
+      'scene_id': sceneId,
+      'platform': platform,
+    });
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> generateARScene({
+    required String designId,
+    Map<String, dynamic>? roomDimensions,
+  }) async {
+    final response = await _dio.post('/ar/generate-scene', data: {
+      'design_id': designId,
+      'room_dimensions': roomDimensions,
+    });
+    return response.data;
+  }
+
+  Future<List<DesignModel>> listDesigns() async {
+    final response = await _dio.get('/design/');
+    return (response.data as List).map((e) => DesignModel.fromJson(e)).toList();
+  }
+
+  Future<DesignModel> getDesign(String designId) async {
+    final response = await _dio.get('/design/$designId');
+    return DesignModel.fromJson(response.data);
+  }
 }
