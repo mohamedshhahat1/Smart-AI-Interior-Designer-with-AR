@@ -189,6 +189,11 @@ class ApiService {
     return response.data;
   }
 
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _dio.get('/auth/me');
+    return response.data;
+  }
+
   Future<List<DesignModel>> listDesigns() async {
     final response = await _dio.get('/design/');
     return (response.data as List).map((e) => DesignModel.fromJson(e)).toList();
