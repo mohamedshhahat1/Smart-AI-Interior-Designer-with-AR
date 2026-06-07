@@ -23,6 +23,7 @@ from backend.app.core.middleware import request_logging_middleware
 from backend.app.api.routes import (
     auth, room, design, furniture, cost, house,
     lighting, feng_shui, seasonal, pet_friendly, walkthrough_3d,
+    assistant,
 )
 
 configure_logging()
@@ -77,6 +78,7 @@ app.include_router(feng_shui.router, prefix=API_PREFIX)
 app.include_router(seasonal.router, prefix=API_PREFIX)
 app.include_router(pet_friendly.router, prefix=API_PREFIX)
 app.include_router(walkthrough_3d.router, prefix=API_PREFIX)
+app.include_router(assistant.router, prefix=API_PREFIX)
 
 
 @app.get("/")
