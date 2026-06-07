@@ -1,12 +1,20 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:camera/camera.dart';
+import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
+import 'package:ar_flutter_plugin/datatypes/config_planedetection.dart';
+import 'package:ar_flutter_plugin/datatypes/hittest_result_types.dart';
+import 'package:ar_flutter_plugin/datatypes/node_types.dart';
+import 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_session_manager.dart';
+import 'package:ar_flutter_plugin/models/ar_anchor.dart';
+import 'package:ar_flutter_plugin/models/ar_hittest_result.dart';
+import 'package:ar_flutter_plugin/models/ar_node.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
 
@@ -19,23 +27,37 @@ class ARViewScreen extends StatefulWidget {
 }
 
 class _ARViewScreenState extends State<ARViewScreen> {
-  CameraController? _cameraController;
-  bool _isCameraReady = false;
+  ARSessionManager? _arSessionManager;
+  ARObjectManager? _arObjectManager;
+  ARAnchorManager? _arAnchorManager;
+
   bool _isLoading = true;
+  bool _planesDetected = false;
   bool _showFurniturePanel = false;
-  final List<Map<String, dynamic>> _placedItems = [];
-  List<Map<String, dynamic>> _availableFurniture = [];
   String? _errorMessage;
-  final GlobalKey _captureKey = GlobalKey();
+  String? _selectedFurniture;
+
+  List<Map<String, dynamic>> _availableFurniture = [];
+  final List<ARNode> _placedNodes = [];
+  final List<ARAnchor> _placedAnchors = [];
+  List<Map<String, dynamic>> _sceneObjects = [];
+
+  static const _default3DModels = {
+    'Sofa': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    'Table': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    'Lamp': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    'Chair': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    'Bookshelf': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    'Plant': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+  };
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
-    _loadDesignData();
+    _checkPermissionsAndLoadData();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _checkPermissionsAndLoadData() async {
     final status = await Permission.camera.request();
     if (!status.isGranted) {
       if (mounted) {
@@ -46,110 +68,194 @@ class _ARViewScreenState extends State<ARViewScreen> {
       }
       return;
     }
-
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'No camera available on this device';
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      _cameraController = CameraController(
-        cameras.first,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-
-      await _cameraController!.initialize();
-      if (mounted) {
-        setState(() {
-          _isCameraReady = true;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to initialize camera';
-          _isLoading = false;
-        });
-      }
-    }
+    await _loadDesignData();
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _loadDesignData() async {
     try {
-      final response = await ApiClient().dio.get('/design/${widget.designId}');
-      final data = response.data;
+      final designResponse = await ApiClient().dio.get('/design/${widget.designId}');
+      final data = designResponse.data;
       final furnitureList = data['furniture_list'];
 
-      if (furnitureList != null && mounted) {
-        List<Map<String, dynamic>> items = [];
-        if (furnitureList is List) {
-          items = furnitureList.cast<Map<String, dynamic>>();
-        } else if (furnitureList is Map) {
-          furnitureList.forEach((key, value) {
-            items.add({
-              'name': key,
-              'category': value is Map ? value['category'] ?? 'furniture' : 'furniture',
-              'icon': _iconForCategory(key.toString()),
-            });
+      List<Map<String, dynamic>> items = [];
+      if (furnitureList is List) {
+        items = furnitureList.cast<Map<String, dynamic>>();
+      } else if (furnitureList is Map) {
+        furnitureList.forEach((key, value) {
+          items.add({
+            'name': key.toString(),
+            'category': value is Map ? value['category'] ?? 'furniture' : 'furniture',
+            'model_3d_url': value is Map ? value['model_3d_url'] : null,
           });
-        }
-
-        setState(() => _availableFurniture = items);
+        });
       }
+
+      try {
+        final arResponse = await ApiClient().dio.post('/ar/generate-scene', data: {
+          'design_id': widget.designId,
+        });
+        final arData = arResponse.data;
+        _sceneObjects = (arData['scene_objects'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      } catch (_) {}
+
+      if (items.isEmpty) {
+        items = _default3DModels.entries
+            .map((e) => {'name': e.key, 'category': 'furniture', 'model_3d_url': e.value})
+            .toList();
+      }
+
+      if (mounted) setState(() => _availableFurniture = items);
     } catch (e) {
-      _availableFurniture = [
-        {'name': 'Sofa', 'category': 'seating', 'icon': Icons.chair},
-        {'name': 'Table', 'category': 'table', 'icon': Icons.table_bar},
-        {'name': 'Lamp', 'category': 'lighting', 'icon': Icons.light},
-        {'name': 'Bookshelf', 'category': 'storage', 'icon': Icons.shelves},
-        {'name': 'Plant', 'category': 'decor', 'icon': Icons.yard},
-        {'name': 'Rug', 'category': 'decor', 'icon': Icons.rectangle},
-      ];
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          _availableFurniture = _default3DModels.entries
+              .map((e) => {'name': e.key, 'category': 'furniture', 'model_3d_url': e.value})
+              .toList();
+        });
+      }
     }
   }
 
-  IconData _iconForCategory(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('sofa') || lower.contains('chair') || lower.contains('seat')) return Icons.chair;
-    if (lower.contains('table') || lower.contains('desk')) return Icons.table_bar;
-    if (lower.contains('lamp') || lower.contains('light')) return Icons.light;
-    if (lower.contains('shelf') || lower.contains('cabinet')) return Icons.shelves;
-    if (lower.contains('plant')) return Icons.yard;
-    if (lower.contains('bed')) return Icons.bed;
-    if (lower.contains('rug') || lower.contains('carpet')) return Icons.rectangle;
-    return Icons.widgets;
+  void _onARViewCreated(
+    ARSessionManager arSessionManager,
+    ARObjectManager arObjectManager,
+    ARAnchorManager arAnchorManager,
+    ARLocationManager arLocationManager,
+  ) {
+    _arSessionManager = arSessionManager;
+    _arObjectManager = arObjectManager;
+    _arAnchorManager = arAnchorManager;
+
+    _arSessionManager!.onInitialize(
+      showFeaturePoints: false,
+      showPlanes: true,
+      showWorldOrigin: false,
+      handlePans: true,
+      handleRotation: true,
+    );
+
+    _arObjectManager!.onInitialize();
+    _arSessionManager!.onPlaneOrPointTap = _onPlaneOrPointTapped;
+
+    _arAnchorManager!.initAnchorManager();
+  }
+
+  Future<void> _onPlaneOrPointTapped(List<ARHitTestResult> hitTestResults) async {
+    if (_selectedFurniture == null || hitTestResults.isEmpty) return;
+
+    final hit = hitTestResults.firstWhere(
+      (r) => r.type == ARHitTestResultType.plane,
+      orElse: () => hitTestResults.first,
+    );
+
+    if (!_planesDetected && mounted) {
+      setState(() => _planesDetected = true);
+    }
+
+    final item = _availableFurniture.firstWhere(
+      (f) => f['name'] == _selectedFurniture,
+      orElse: () => _availableFurniture.first,
+    );
+
+    final sceneObj = _sceneObjects.firstWhere(
+      (s) => s['name'] == _selectedFurniture,
+      orElse: () => {},
+    );
+
+    final scale = sceneObj.isNotEmpty && sceneObj['scale'] != null
+        ? vector.Vector3(
+            (sceneObj['scale']['x'] as num?)?.toDouble() ?? 0.2,
+            (sceneObj['scale']['y'] as num?)?.toDouble() ?? 0.2,
+            (sceneObj['scale']['z'] as num?)?.toDouble() ?? 0.2,
+          )
+        : vector.Vector3(0.2, 0.2, 0.2);
+
+    final modelUrl = item['model_3d_url'] as String?;
+
+    final newNode = ARNode(
+      type: NodeType.webGLB,
+      uri: modelUrl ?? 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+      scale: scale,
+      position: hit.worldTransform.getTranslation(),
+      rotation: vector.Vector4(1.0, 0.0, 0.0, 0.0),
+      name: '${_selectedFurniture}_${_placedNodes.length}',
+    );
+
+    final newAnchor = ARPlaneAnchor(
+      transformation: hit.worldTransform,
+      name: 'anchor_${_placedAnchors.length}',
+    );
+
+    bool? didAddAnchor = await _arAnchorManager?.addAnchor(newAnchor);
+    if (didAddAnchor == true) {
+      bool? didAddNode = await _arObjectManager?.addNode(newNode, planeAnchor: newAnchor);
+      if (didAddNode == true) {
+        _placedNodes.add(newNode);
+        _placedAnchors.add(newAnchor);
+        if (mounted) setState(() {});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$_selectedFurniture placed on surface'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _undoLastPlacement() async {
+    if (_placedNodes.isEmpty) return;
+
+    final lastNode = _placedNodes.removeLast();
+    final lastAnchor = _placedAnchors.removeLast();
+
+    await _arObjectManager?.removeNode(lastNode);
+    await _arAnchorManager?.removeAnchor(lastAnchor);
+
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${lastNode.name?.split('_').first ?? "Item"} removed'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  Future<void> _clearAll() async {
+    for (final node in _placedNodes) {
+      await _arObjectManager?.removeNode(node);
+    }
+    for (final anchor in _placedAnchors) {
+      await _arAnchorManager?.removeAnchor(anchor);
+    }
+    _placedNodes.clear();
+    _placedAnchors.clear();
+    if (mounted) setState(() {});
   }
 
   Future<void> _captureScene() async {
     try {
-      if (_cameraController != null && _cameraController!.value.isInitialized) {
-        final image = await _cameraController!.takePicture();
+      final image = await _arSessionManager?.snapshot();
+      if (image != null) {
         final dir = await getApplicationDocumentsDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final savedPath = '${dir.path}/ar_capture_$timestamp.jpg';
-        await File(image.path).copy(savedPath);
+        final file = File('${dir.path}/ar_capture_$timestamp.png');
+        await file.writeAsBytes(image);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Scene captured and saved'),
+              content: const Text('AR scene captured'),
               action: SnackBarAction(
                 label: 'View',
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (_) => Dialog(
-                      child: Image.file(File(savedPath)),
-                    ),
+                    builder: (_) => Dialog(child: Image.file(file)),
                   );
                 },
               ),
@@ -160,7 +266,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to capture scene')),
+          const SnackBar(content: Text('Failed to capture AR scene')),
         );
       }
     }
@@ -168,133 +274,46 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   Future<void> _shareScene() async {
     try {
-      if (_cameraController != null && _cameraController!.value.isInitialized) {
-        final image = await _cameraController!.takePicture();
+      final image = await _arSessionManager?.snapshot();
+      if (image != null) {
         final dir = await getApplicationDocumentsDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final savedPath = '${dir.path}/ar_share_$timestamp.jpg';
-        await File(image.path).copy(savedPath);
+        final file = File('${dir.path}/ar_share_$timestamp.png');
+        await file.writeAsBytes(image);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Image saved to: $savedPath')),
+            SnackBar(content: Text('AR image saved to: ${file.path}')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to share scene')),
+          const SnackBar(content: Text('Failed to share AR scene')),
         );
       }
     }
   }
 
-  void _placeFurniture(Map<String, dynamic> item) {
-    setState(() => _placedItems.add(item));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${item['name']} placed in scene'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _removeLastItem() {
-    if (_placedItems.isNotEmpty) {
-      final removed = _placedItems.removeLast();
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${removed['name']} removed'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
-  }
-
   @override
   void dispose() {
-    _cameraController?.dispose();
+    _arSessionManager?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        title: const Text('AR View'),
-        actions: [
-          if (_placedItems.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.undo),
-              onPressed: _removeLastItem,
-              tooltip: 'Remove last item',
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                _placedItems.clear();
-              });
-            },
-          ),
-        ],
-      ),
-      body: RepaintBoundary(
-        key: _captureKey,
-        child: Stack(
-          children: [
-            _buildCameraView(),
-            if (_placedItems.isNotEmpty)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 56,
-                left: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_placedItems.length} items placed',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                  ),
-                ),
-              ),
-            for (int i = 0; i < _placedItems.length; i++)
-              Positioned(
-                left: 60.0 + (i % 3) * 100,
-                top: 200.0 + (i ~/ 3) * 120,
-                child: _buildPlacedItemOverlay(_placedItems[i]),
-              ),
-            if (_isCameraReady)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildBottomPanel(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCameraView() {
     if (_isLoading) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(color: Colors.white),
               SizedBox(height: 16),
-              Text('Initializing camera...', style: TextStyle(color: Colors.white70)),
+              Text('Preparing AR...', style: TextStyle(color: Colors.white70)),
             ],
           ),
         ),
@@ -302,9 +321,14 @@ class _ARViewScreenState extends State<ARViewScreen> {
     }
 
     if (_errorMessage != null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          title: const Text('AR View'),
+        ),
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -318,7 +342,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
                     _isLoading = true;
                     _errorMessage = null;
                   });
-                  _initializeCamera();
+                  _checkPermissionsAndLoadData();
                 },
                 child: const Text('Retry'),
               ),
@@ -328,42 +352,98 @@ class _ARViewScreenState extends State<ARViewScreen> {
       );
     }
 
-    if (_isCameraReady && _cameraController != null) {
-      return SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _cameraController!.value.previewSize!.height,
-            height: _cameraController!.value.previewSize!.width,
-            child: CameraPreview(_cameraController!),
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        title: const Text('AR View'),
+        actions: [
+          if (_placedNodes.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.undo),
+              onPressed: _undoLastPlacement,
+              tooltip: 'Undo last',
+            ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            onPressed: _clearAll,
+            tooltip: 'Clear all',
           ),
-        ),
-      );
-    }
-
-    return Container(color: Colors.black);
-  }
-
-  Widget _buildPlacedItemOverlay(Map<String, dynamic> item) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white54),
+        ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      body: Stack(
         children: [
-          Icon(
-            item['icon'] as IconData? ?? Icons.widgets,
-            color: Colors.white,
-            size: 28,
+          ARView(
+            onARViewCreated: _onARViewCreated,
+            planeDetectionConfig: PlaneDetectionConfig.horizontalAndVertical,
           ),
-          const SizedBox(height: 2),
-          Text(
-            item['name'] as String? ?? 'Item',
-            style: const TextStyle(color: Colors.white, fontSize: 10),
+          if (!_planesDetected)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 16, width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Move your phone to detect surfaces...',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (_placedNodes.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_placedNodes.length} item${_placedNodes.length > 1 ? 's' : ''} placed',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ),
+          if (_selectedFurniture != null && _planesDetected)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Tap surface to place $_selectedFurniture',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildBottomPanel(),
           ),
         ],
       ),
@@ -371,89 +451,94 @@ class _ARViewScreenState extends State<ARViewScreen> {
   }
 
   Widget _buildBottomPanel() {
-    final displayItems = _availableFurniture.isNotEmpty
-        ? _availableFurniture.take(4).toList()
-        : [
-            {'name': 'Sofa', 'icon': Icons.chair},
-            {'name': 'Table', 'icon': Icons.table_bar},
-            {'name': 'Lamp', 'icon': Icons.light},
-          ];
+    final displayItems = _availableFurniture.take(4).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withOpacity(0.85),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ...displayItems.map((item) => _buildARButton(
-                    item['icon'] as IconData? ?? Icons.widgets,
-                    item['name'] as String? ?? 'Item',
-                    () => _placeFurniture(item),
-                  )),
-              if (_availableFurniture.length > 4)
-                _buildARButton(Icons.more_horiz, 'More', () {
-                  setState(() => _showFurniturePanel = !_showFurniturePanel);
-                }),
-            ],
-          ),
-          if (_showFurniturePanel && _availableFurniture.length > 4) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 80,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _availableFurniture.length - 4,
-                itemBuilder: (context, index) {
-                  final item = _availableFurniture[index + 4];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: _buildARButton(
-                      item['icon'] as IconData? ?? Icons.widgets,
-                      item['name'] as String? ?? 'Item',
-                      () => _placeFurniture(item),
-                    ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ...displayItems.map((item) {
+                  final name = item['name'] as String? ?? 'Item';
+                  final isSelected = _selectedFurniture == name;
+                  return _buildARButton(
+                    _iconForName(name),
+                    name,
+                    () => setState(() => _selectedFurniture = isSelected ? null : name),
+                    isSelected: isSelected,
                   );
-                },
-              ),
+                }),
+                if (_availableFurniture.length > 4)
+                  _buildARButton(Icons.more_horiz, 'More', () {
+                    setState(() => _showFurniturePanel = !_showFurniturePanel);
+                  }),
+              ],
             ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _captureScene,
-                  icon: const Icon(Icons.camera),
-                  label: const Text('Capture'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
+            if (_showFurniturePanel && _availableFurniture.length > 4) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _availableFurniture.length - 4,
+                  itemBuilder: (context, index) {
+                    final item = _availableFurniture[index + 4];
+                    final name = item['name'] as String? ?? 'Item';
+                    final isSelected = _selectedFurniture == name;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: _buildARButton(
+                        _iconForName(name),
+                        name,
+                        () => setState(() => _selectedFurniture = isSelected ? null : name),
+                        isSelected: isSelected,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _captureScene,
+                    icon: const Icon(Icons.camera),
+                    label: const Text('Capture'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _shareScene,
-                  icon: const Icon(Icons.share, color: Colors.white),
-                  label: const Text('Share', style: TextStyle(color: Colors.white)),
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _shareScene,
+                    icon: const Icon(Icons.share, color: Colors.white),
+                    label: const Text('Share', style: TextStyle(color: Colors.white)),
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildARButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildARButton(IconData icon, String label, VoidCallback onTap, {bool isSelected = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -461,15 +546,37 @@ class _ARViewScreenState extends State<ARViewScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: isSelected ? AppTheme.primaryColor : Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
+              border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
             ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? AppTheme.primaryColor : Colors.white70,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  IconData _iconForName(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('sofa') || lower.contains('couch')) return Icons.chair;
+    if (lower.contains('chair') || lower.contains('seat')) return Icons.event_seat;
+    if (lower.contains('table') || lower.contains('desk')) return Icons.table_bar;
+    if (lower.contains('lamp') || lower.contains('light')) return Icons.light;
+    if (lower.contains('shelf') || lower.contains('cabinet') || lower.contains('bookshelf')) return Icons.shelves;
+    if (lower.contains('plant') || lower.contains('flower')) return Icons.yard;
+    if (lower.contains('bed')) return Icons.bed;
+    if (lower.contains('rug') || lower.contains('carpet')) return Icons.rectangle;
+    if (lower.contains('tv') || lower.contains('screen')) return Icons.tv;
+    return Icons.widgets;
   }
 }
