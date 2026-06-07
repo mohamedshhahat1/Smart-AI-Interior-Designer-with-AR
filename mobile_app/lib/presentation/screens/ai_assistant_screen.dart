@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
+import 'package:smart_interior_ai/core/utils/api_client.dart';
 
 class AIAssistantScreen extends StatefulWidget {
   final String roomId;
@@ -33,9 +34,9 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isTyping) return;
 
     setState(() {
       _messages.add({'role': 'user', 'content': text});
@@ -44,61 +45,50 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      final history = _messages
+          .where((m) => m['role'] != null && m['content'] != null)
+          .map((m) => {'role': m['role']!, 'content': m['content']!})
+          .toList();
+
+      final response = await ApiClient().dio.post('/assistant/chat', data: {
+        'room_id': widget.roomId,
+        'message': text,
+        'conversation_history': history.sublist(0, history.length - 1),
+      });
+
+      final data = response.data;
+      final assistantMessage = data['message'] as String? ?? 'I couldn\'t process that request.';
+      final suggestions = (data['suggestions'] as List?)?.cast<String>() ?? [];
+
+      if (mounted) {
+        setState(() {
+          _messages.add({'role': 'assistant', 'content': assistantMessage});
+          _isTyping = false;
+        });
+
+        if (suggestions.isNotEmpty) {
+          setState(() {
+            _messages.add({
+              'role': 'assistant',
+              'content': 'Suggestions:\n${suggestions.map((s) => '• $s').join('\n')}',
+            });
+          });
+        }
+        _scrollToBottom();
+      }
+    } catch (e) {
       if (mounted) {
         setState(() {
           _messages.add({
             'role': 'assistant',
-            'content': _getAssistantResponse(text),
+            'content': 'Sorry, I\'m having trouble connecting to the AI service. Please try again.',
           });
           _isTyping = false;
         });
         _scrollToBottom();
       }
-    });
-  }
-
-  String _getAssistantResponse(String message) {
-    final lower = message.toLowerCase();
-    if (lower.contains('larger') || lower.contains('bigger') || lower.contains('space')) {
-      return 'To make your room look larger:\n\n'
-          '1. Use light, neutral wall colors (white, cream, light gray)\n'
-          '2. Add mirrors to create depth\n'
-          '3. Choose furniture with exposed legs\n'
-          '4. Maximize natural light with sheer curtains\n'
-          '5. Use a monochromatic color scheme\n\n'
-          'Would you like me to generate a design with these changes?';
-    } else if (lower.contains('cozy') || lower.contains('warm')) {
-      return 'For a cozy atmosphere:\n\n'
-          '1. Add warm lighting with dimmers\n'
-          '2. Layer textiles - throws, cushions, rugs\n'
-          '3. Use warm tones (amber, terracotta)\n'
-          '4. Include natural materials (wood, wool)\n'
-          '5. Create intimate seating areas\n\n'
-          'Shall I create a preview with these elements?';
-    } else if (lower.contains('color') || lower.contains('palette')) {
-      return 'Here are popular color palettes:\n\n'
-          'Scandinavian: White + Light Wood + Sage Green\n'
-          'Modern: Charcoal + White + Gold Accents\n'
-          'Coastal: Navy Blue + Sandy Beige + White\n'
-          'Bohemian: Terracotta + Teal + Mustard\n\n'
-          'Which palette interests you?';
-    } else if (lower.contains('budget') || lower.contains('cost') || lower.contains('cheap')) {
-      return 'Budget-friendly design tips:\n\n'
-          '1. Repaint walls for the biggest impact (~\$200-400)\n'
-          '2. Rearrange existing furniture\n'
-          '3. Add affordable accessories (pillows, throws)\n'
-          '4. DIY artwork or gallery wall\n'
-          '5. Shop second-hand for statement pieces\n\n'
-          'What is your budget range?';
     }
-    return 'Great question! Based on your room analysis, I recommend:\n\n'
-        '1. Follow the 60-30-10 color rule\n'
-        '2. Create a clear focal point\n'
-        '3. Balance furniture scale with room size\n'
-        '4. Layer lighting (ambient + task + accent)\n'
-        '5. Add texture variety for visual interest\n\n'
-        'Would you like specific suggestions for any of these?';
   }
 
   void _scrollToBottom() {
