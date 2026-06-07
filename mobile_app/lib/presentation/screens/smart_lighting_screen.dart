@@ -20,6 +20,16 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
   bool _isDetecting = false;
   MoodDetectResponseModel? _result;
 
+  bool _isLoadingCircadian = false;
+  List<Map<String, dynamic>> _circadianSchedule = [];
+  String _wakeTime = '07:00';
+  String _sleepTime = '23:00';
+  bool _circadianLoaded = false;
+
+  bool _isSavingScene = false;
+  String? _savedSceneId;
+  bool _isExporting = false;
+
   final List<Map<String, dynamic>> _moods = [
     {'label': 'Relaxed', 'icon': Icons.spa, 'color': Color(0xFF81C784)},
     {'label': 'Focused', 'icon': Icons.psychology, 'color': Color(0xFF64B5F6)},
@@ -41,6 +51,11 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 2 && !_circadianLoaded) {
+        _loadCircadianSchedule();
+      }
+    });
   }
 
   @override
@@ -62,6 +77,7 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
       setState(() {
         _result = MoodDetectResponseModel.fromJson(response.data);
         _isDetecting = false;
+        _savedSceneId = null;
       });
     } catch (e) {
       setState(() => _isDetecting = false);
@@ -71,6 +87,165 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
         );
       }
     }
+  }
+
+  Future<void> _loadCircadianSchedule() async {
+    setState(() => _isLoadingCircadian = true);
+    try {
+      final response = await ApiClient().dio.post('/lighting/circadian', data: {
+        'wake_time': _wakeTime,
+        'sleep_time': _sleepTime,
+      });
+      final data = response.data;
+      final schedule = (data['schedule'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      if (mounted) {
+        setState(() {
+          _circadianSchedule = schedule;
+          _isLoadingCircadian = false;
+          _circadianLoaded = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingCircadian = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load circadian schedule')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveScene() async {
+    if (_result == null) return;
+    setState(() => _isSavingScene = true);
+
+    try {
+      final rec = _result!.recommendation;
+      final analysis = _result!.moodAnalysis;
+
+      final response = await ApiClient().dio.post('/lighting/scenes', data: {
+        'name': '${analysis.detectedMood[0].toUpperCase()}${analysis.detectedMood.substring(1)} Scene',
+        'mood': analysis.detectedMood,
+        'color_temperature': rec.colorTemperature,
+        'brightness': rec.brightness,
+        'color_hex': rec.colorHex,
+        'saturation': rec.saturation,
+        'transition_duration': rec.transitionDuration,
+        'time_of_day': rec.timeOfDay,
+        'activity': _selectedActivity?.toLowerCase(),
+      });
+
+      final savedId = response.data['id'] as String?;
+      if (mounted) {
+        setState(() {
+          _isSavingScene = false;
+          _savedSceneId = savedId;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Scene saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSavingScene = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save scene')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportToSmartHome() async {
+    if (_savedSceneId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Save the scene first before exporting')),
+      );
+      return;
+    }
+
+    final platform = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Export to Smart Home'),
+        children: [
+          for (final p in ['philips_hue', 'lifx', 'homekit', 'google_home', 'alexa'])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, p),
+              child: ListTile(
+                leading: Icon(_platformIcon(p)),
+                title: Text(_platformLabel(p)),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    if (platform == null) return;
+
+    setState(() => _isExporting = true);
+    try {
+      final response = await ApiClient().dio.post('/lighting/export', data: {
+        'scene_id': _savedSceneId,
+        'platform': platform,
+      });
+
+      final data = response.data;
+      final instructions = (data['instructions'] as List?)?.cast<String>() ?? [];
+
+      if (mounted) {
+        setState(() => _isExporting = false);
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Exported to ${_platformLabel(platform)}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Setup Instructions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...instructions.map((i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• $i', style: const TextStyle(fontSize: 13)),
+                    )),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isExporting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to export scene')),
+        );
+      }
+    }
+  }
+
+  String _platformLabel(String p) {
+    const labels = {
+      'philips_hue': 'Philips Hue',
+      'lifx': 'LIFX',
+      'homekit': 'Apple HomeKit',
+      'google_home': 'Google Home',
+      'alexa': 'Amazon Alexa',
+    };
+    return labels[p] ?? p;
+  }
+
+  IconData _platformIcon(String p) {
+    const icons = {
+      'philips_hue': Icons.lightbulb,
+      'lifx': Icons.light_mode,
+      'homekit': Icons.home,
+      'google_home': Icons.speaker,
+      'alexa': Icons.speaker_group,
+    };
+    return icons[p] ?? Icons.devices;
   }
 
   @override
@@ -296,14 +471,30 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
             )),
           ],
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.save),
-              label: const Text('Save This Scene'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isSavingScene ? null : _saveScene,
+                  icon: _isSavingScene
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Icon(_savedSceneId != null ? Icons.check : Icons.save),
+                  label: Text(_savedSceneId != null ? 'Saved' : 'Save This Scene'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isExporting ? null : _exportToSmartHome,
+                  icon: _isExporting
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.download),
+                  label: const Text('Export'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor, foregroundColor: Colors.white),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -380,23 +571,69 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
           const Text('Circadian Rhythm Schedule', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text('Lighting that follows your natural body clock', style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTimePicker('Wake Time', _wakeTime, (v) {
+                  setState(() => _wakeTime = v);
+                }),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTimePicker('Sleep Time', _sleepTime, (v) {
+                  setState(() => _sleepTime = v);
+                }),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _isLoadingCircadian ? null : _loadCircadianSchedule,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                ),
+                child: _isLoadingCircadian
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.refresh),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
-          ...[
-            _circadianEntry('06:30', 'Gentle Wake', '2200K', 0.15, Icons.alarm, Colors.deepPurple),
-            _circadianEntry('07:00', 'Sunrise Simulation', '3000K', 0.45, Icons.wb_sunny, Colors.orange),
-            _circadianEntry('09:00', 'Morning Focus', '5000K', 0.85, Icons.psychology, Colors.blue),
-            _circadianEntry('12:00', 'Peak Daylight', '5500K', 0.95, Icons.wb_sunny, Colors.amber),
-            _circadianEntry('16:00', 'Creative Hour', '4500K', 0.75, Icons.palette, Colors.purple),
-            _circadianEntry('18:00', 'Golden Hour', '3500K', 0.60, Icons.wb_twilight, Colors.deepOrange),
-            _circadianEntry('21:00', 'Cozy Evening', '2500K', 0.30, Icons.local_fire_department, Colors.brown),
-            _circadianEntry('22:00', 'Sleep Prep', '2000K', 0.15, Icons.bedtime, Colors.indigo),
-            _circadianEntry('23:00', 'Sleep Mode', '1800K', 0.03, Icons.nightlight, Colors.grey),
-          ],
+          if (_isLoadingCircadian)
+            const Center(child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ))
+          else if (_circadianSchedule.isEmpty && _circadianLoaded)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text('No schedule generated yet', style: TextStyle(color: Colors.grey[500])),
+              ),
+            )
+          else
+            ..._circadianSchedule.map((entry) {
+              final time = entry['time'] as String? ?? '';
+              final label = entry['label'] as String? ?? entry['phase'] as String? ?? '';
+              final temp = entry['color_temperature']?.toString() ?? '';
+              final brightness = entry['brightness'];
+              final brightnessPercent = brightness is num ? (brightness * 100).round() : 0;
+
+              return _circadianEntry(
+                time,
+                label,
+                '${temp}K',
+                brightness is num ? brightness.toDouble() : 0.0,
+                _circadianIcon(label),
+                _circadianColor(label),
+              );
+            }),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: _circadianSchedule.isEmpty ? null : _exportToSmartHome,
               icon: const Icon(Icons.download),
               label: const Text('Export to Smart Home'),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor, foregroundColor: Colors.white),
@@ -405,6 +642,64 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
         ],
       ),
     );
+  }
+
+  Widget _buildTimePicker(String label, String currentValue, ValueChanged<String> onChanged) {
+    return GestureDetector(
+      onTap: () async {
+        final parts = currentValue.split(':');
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+        );
+        if (picked != null) {
+          final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+          onChanged(formatted);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+            const SizedBox(height: 4),
+            Text(currentValue, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _circadianIcon(String label) {
+    final lower = label.toLowerCase();
+    if (lower.contains('wake') || lower.contains('alarm')) return Icons.alarm;
+    if (lower.contains('sunrise')) return Icons.wb_sunny;
+    if (lower.contains('morning') || lower.contains('focus')) return Icons.psychology;
+    if (lower.contains('peak') || lower.contains('daylight') || lower.contains('noon')) return Icons.wb_sunny;
+    if (lower.contains('creative') || lower.contains('afternoon')) return Icons.palette;
+    if (lower.contains('golden') || lower.contains('sunset') || lower.contains('evening')) return Icons.wb_twilight;
+    if (lower.contains('cozy') || lower.contains('warm')) return Icons.local_fire_department;
+    if (lower.contains('sleep') && lower.contains('prep')) return Icons.bedtime;
+    if (lower.contains('sleep') || lower.contains('night')) return Icons.nightlight;
+    return Icons.schedule;
+  }
+
+  Color _circadianColor(String label) {
+    final lower = label.toLowerCase();
+    if (lower.contains('wake') || lower.contains('alarm')) return Colors.deepPurple;
+    if (lower.contains('sunrise')) return Colors.orange;
+    if (lower.contains('morning') || lower.contains('focus')) return Colors.blue;
+    if (lower.contains('peak') || lower.contains('daylight') || lower.contains('noon')) return Colors.amber;
+    if (lower.contains('creative') || lower.contains('afternoon')) return Colors.purple;
+    if (lower.contains('golden') || lower.contains('sunset') || lower.contains('evening')) return Colors.deepOrange;
+    if (lower.contains('cozy') || lower.contains('warm')) return Colors.brown;
+    if (lower.contains('sleep') && lower.contains('prep')) return Colors.indigo;
+    if (lower.contains('sleep') || lower.contains('night')) return Colors.grey;
+    return Colors.teal;
   }
 
   Widget _circadianEntry(String time, String label, String temp, double brightness, IconData icon, Color color) {
