@@ -1,9 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
+import 'package:smart_interior_ai/core/utils/api_client.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedNavIndex = 0;
+  List<Map<String, dynamic>> _recentDesigns = [];
+  bool _isLoadingDesigns = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentDesigns();
+  }
+
+  Future<void> _loadRecentDesigns() async {
+    try {
+      final response = await ApiClient().dio.get('/room/');
+      final rooms = response.data as List;
+
+      List<Map<String, dynamic>> designs = [];
+      for (final room in rooms.take(5)) {
+        designs.add({
+          'id': room['id'],
+          'room_type': room['room_type'] ?? 'Room',
+          'image_url': room['image_url'],
+          'created_at': room['created_at'],
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _recentDesigns = designs;
+          _isLoadingDesigns = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDesigns = false);
+      }
+    }
+  }
+
+  void _onNavTap(int index) {
+    setState(() => _selectedNavIndex = index);
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        context.go('/scan');
+        break;
+      case 2:
+        _openAssistantPicker();
+        break;
+      case 3:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile coming soon')),
+        );
+        break;
+    }
+  }
+
+  void _openAssistantPicker() {
+    if (_recentDesigns.isNotEmpty) {
+      context.go('/assistant/${_recentDesigns.first['id']}');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Scan a room first to use the AI assistant')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +113,15 @@ class HomeScreen extends StatelessWidget {
                     title: 'AI Design',
                     subtitle: 'Generate designs',
                     color: AppTheme.secondaryColor,
-                    onTap: () {},
+                    onTap: () {
+                      if (_recentDesigns.isNotEmpty) {
+                        context.go('/design/${_recentDesigns.first['id']}');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Scan a room first to generate designs')),
+                        );
+                      }
+                    },
                   )),
                   const SizedBox(width: 12),
                   Expanded(
@@ -50,7 +131,15 @@ class HomeScreen extends StatelessWidget {
                     title: 'AR View',
                     subtitle: 'See in your room',
                     color: AppTheme.accentColor,
-                    onTap: () {},
+                    onTap: () {
+                      if (_recentDesigns.isNotEmpty) {
+                        context.go('/ar/${_recentDesigns.first['id']}');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Generate a design first to use AR view')),
+                        );
+                      }
+                    },
                   )),
                 ],
               ),
@@ -64,7 +153,15 @@ class HomeScreen extends StatelessWidget {
                     title: 'Furniture',
                     subtitle: 'Get recommendations',
                     color: AppTheme.successColor,
-                    onTap: () {},
+                    onTap: () {
+                      if (_recentDesigns.isNotEmpty) {
+                        context.go('/design/${_recentDesigns.first['id']}');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Scan a room first to get furniture recommendations')),
+                        );
+                      }
+                    },
                   )),
                   const SizedBox(width: 12),
                   Expanded(
@@ -74,7 +171,15 @@ class HomeScreen extends StatelessWidget {
                     title: 'Cost',
                     subtitle: 'Estimate budget',
                     color: AppTheme.warningColor,
-                    onTap: () {},
+                    onTap: () {
+                      if (_recentDesigns.isNotEmpty) {
+                        context.go('/cost/${_recentDesigns.first['id']}');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Generate a design first to estimate costs')),
+                        );
+                      }
+                    },
                   )),
                 ],
               ),
@@ -98,24 +203,76 @@ class HomeScreen extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 12),
-              _buildEmptyState(context),
+              _buildRecentDesigns(context),
             ],
           ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: _selectedNavIndex,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.camera_alt), label: 'Scan'),
           NavigationDestination(icon: Icon(Icons.chat), label: 'Assistant'),
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
-        onDestinationSelected: (index) {
-          if (index == 1) context.go('/scan');
-        },
+        onDestinationSelected: _onNavTap,
       ),
     );
+  }
+
+  Widget _buildRecentDesigns(BuildContext context) {
+    if (_isLoadingDesigns) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_recentDesigns.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    return Column(
+      children: _recentDesigns.map((design) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              child: const Icon(Icons.design_services, color: AppTheme.primaryColor),
+            ),
+            title: Text(
+              design['room_type'] as String? ?? 'Room',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              _formatDate(design['created_at'] as String?),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => context.go('/design/${design['id']}'),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return '';
+    }
   }
 
   Widget _buildScanCard(BuildContext context) {
