@@ -103,6 +103,35 @@ async def refresh_token(request: Request, db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from backend.app.core.security import get_current_user_id
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    token = auth_header.split(" ", 1)[1]
+    payload = decode_token(token, expected_type="access")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    import uuid as _uuid
+    result = await db.execute(select(User).where(User.id == _uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return UserResponse(
+        id=str(user.id), name=user.name, email=user.email,
+        is_active=user.is_active, created_at=user.created_at,
+    )
+
+
 @router.post("/logout")
 async def logout():
     return {"detail": "Logged out successfully"}
