@@ -1,4 +1,9 @@
+import os
+import tempfile
 from typing import Optional
+from urllib.parse import urlparse
+
+import httpx
 
 from ai_services.vision.object_detection import detector
 from ai_services.vision.segmentation import segmenter
@@ -14,10 +19,34 @@ ROOM_TYPE_INDICATORS = {
 }
 
 
+def _resolve_image(image_path: str) -> str:
+    if os.path.exists(image_path):
+        return image_path
+
+    parsed = urlparse(image_path)
+    if parsed.scheme in ("http", "https"):
+        response = httpx.get(image_path, timeout=30.0)
+        response.raise_for_status()
+
+        ext = os.path.splitext(parsed.path)[-1] or ".jpg"
+        tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+        tmp.write(response.content)
+        tmp.close()
+        return tmp.name
+
+    raise FileNotFoundError(f"Image not found and not a valid URL: {image_path}")
+
+
 class RoomAnalyzer:
     def analyze(self, image_path: str) -> dict:
-        detections = detector.detect(image_path)
-        segmentation = segmenter.segment_room(image_path)
+        local_path = _resolve_image(image_path)
+        try:
+            detections = detector.detect(local_path)
+            segmentation = segmenter.segment_room(local_path)
+        finally:
+            if local_path != image_path and os.path.exists(local_path):
+                os.unlink(local_path)
+
         room_type = self._classify_room(detections)
         area = self._estimate_area(segmentation)
         objects_summary = detector.get_room_objects_summary(detections)

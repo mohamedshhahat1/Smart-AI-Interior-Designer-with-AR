@@ -10,6 +10,7 @@ from backend.app.db.database import get_db
 from backend.app.models.room import Room
 from backend.app.schemas.response_models import RoomResponse, RoomAnalysis
 from backend.app.services.ai_service import ai_service
+from backend.app.services.storage_service import storage_service
 from backend.app.core.security import get_current_user_id
 from backend.app.core.config import get_settings
 from backend.app.core.limiter import limiter
@@ -42,8 +43,11 @@ async def upload_room(
             detail=f"Image exceeds {settings.max_upload_size_mb}MB limit",
         )
 
-    image_filename = f"rooms/{user_id}/{uuid.uuid4()}.{file.filename.split('.')[-1]}"
-    image_url = f"/storage/{image_filename}"
+    ext = file.filename.split('.')[-1] if file.filename and '.' in file.filename else 'jpg'
+    image_filename = f"rooms/{user_id}/{uuid.uuid4()}.{ext}"
+
+    storage_service.upload_bytes(image_filename, contents, content_type=file.content_type or "image/jpeg")
+    image_url = storage_service.get_internal_url(image_filename)
 
     try:
         analysis = await ai_service.analyze_room(image_url)

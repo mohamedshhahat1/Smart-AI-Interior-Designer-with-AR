@@ -1,12 +1,19 @@
 import io
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
+import httpx
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
 
 
 def load_image(image_path: str) -> Image.Image:
+    parsed = urlparse(image_path)
+    if parsed.scheme in ("http", "https"):
+        response = httpx.get(image_path, timeout=30.0)
+        response.raise_for_status()
+        return Image.open(io.BytesIO(response.content)).convert("RGB")
     return Image.open(image_path).convert("RGB")
 
 
