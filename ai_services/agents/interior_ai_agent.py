@@ -173,41 +173,10 @@ Please provide:
             response = self.gemini_model.generate_content(combined)
             return response.text
 
-        return self._get_fallback_response(messages[-1]["content"])
-
-    def _get_fallback_response(self, user_message: str) -> str:
-        message_lower = user_message.lower()
-
-        if "larger" in message_lower or "bigger" in message_lower or "spacious" in message_lower:
-            return (
-                "To make your room appear larger:\n"
-                "1. Use lighter colors on walls (white, cream, light gray)\n"
-                "2. Add mirrors to create depth illusion\n"
-                "3. Choose furniture with exposed legs\n"
-                "4. Minimize clutter and use built-in storage\n"
-                "5. Maximize natural light with sheer curtains\n"
-                "6. Use a monochromatic color scheme"
-            )
-        elif "cozy" in message_lower or "warm" in message_lower:
-            return (
-                "To create a cozy atmosphere:\n"
-                "1. Add warm lighting with dimmers\n"
-                "2. Layer textiles (throws, cushions, rugs)\n"
-                "3. Use warm color tones (amber, terracotta, deep red)\n"
-                "4. Include natural materials (wood, wool, leather)\n"
-                "5. Create intimate seating arrangements\n"
-                "6. Add candles or fireplace elements"
-            )
-        else:
-            return (
-                "Here are some general design recommendations:\n"
-                "1. Follow the 60-30-10 color rule\n"
-                "2. Create a focal point in the room\n"
-                "3. Balance furniture scale with room size\n"
-                "4. Layer lighting (ambient, task, accent)\n"
-                "5. Add texture variety for visual interest\n"
-                "6. Ensure traffic flow paths are clear"
-            )
+        raise RuntimeError(
+            "No LLM provider configured. Set OPENAI_API_KEY or GOOGLE_API_KEY "
+            "environment variable to enable the AI assistant."
+        )
 
     def _extract_suggestions(self, response_text: str) -> list[str]:
         suggestions = []
