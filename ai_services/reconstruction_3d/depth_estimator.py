@@ -23,7 +23,7 @@ class DepthEstimator:
             else:
                 self.transform = midas_transforms.small_transform
         except ImportError:
-            self.model = "fallback"
+            self.model = "heuristic"
 
     def estimate_depth(self, image_path: str) -> dict:
         self.load_model()
@@ -31,8 +31,9 @@ class DepthEstimator:
         image = np.array(Image.open(image_path).convert("RGB"))
         height, width = image.shape[:2]
 
-        if self.model == "fallback":
-            depth_map = self._generate_synthetic_depth(height, width)
+        if self.model == "heuristic":
+            depth_map = self._estimate_depth_from_image(image, height, width)
+            method = "heuristic"
         else:
             import torch
             input_batch = self.transform(image)
@@ -45,12 +46,14 @@ class DepthEstimator:
                     align_corners=False,
                 ).squeeze()
             depth_map = prediction.cpu().numpy()
+            method = "midas"
 
         depth_normalized = (depth_map - depth_map.min()) / (depth_map.max() - depth_map.min() + 1e-8)
 
         room_dims = self._estimate_room_dimensions(depth_normalized, width, height)
 
         return {
+            "method": method,
             "depth_map": depth_normalized.tolist() if depth_normalized.size < 10000 else None,
             "depth_map_shape": [height, width],
             "min_depth": float(depth_map.min()),
@@ -59,22 +62,33 @@ class DepthEstimator:
             "estimated_dimensions": room_dims,
         }
 
-    def _generate_synthetic_depth(self, height: int, width: int) -> np.ndarray:
+    def _estimate_depth_from_image(self, image: np.ndarray, height: int, width: int) -> np.ndarray:
+        gray = np.mean(image.astype(np.float32), axis=2)
+
+        gray_norm = gray / 255.0
+
         y_coords = np.linspace(0, 1, height).reshape(-1, 1)
         x_coords = np.linspace(0, 1, width).reshape(1, -1)
 
-        floor_depth = np.clip(1.0 - y_coords * 0.8, 0.2, 1.0)
-        wall_depth = np.ones((height, width)) * 0.5
-        center_x = np.abs(x_coords - 0.5)
-        wall_depth += center_x * 0.3
-
-        depth = np.where(
+        positional_depth = np.where(
             y_coords > 0.65,
-            floor_depth * np.ones((1, width)),
-            wall_depth,
+            np.clip(1.0 - y_coords * 0.8, 0.2, 1.0) * np.ones((1, width)),
+            0.5 + np.abs(x_coords - 0.5) * 0.3,
         )
+        positional_depth[:int(height * 0.15), :] = 0.8
 
-        depth[:int(height * 0.15), :] = 0.8
+        local_var = np.zeros_like(gray_norm)
+        k = 16
+        for r in range(0, height - k, k):
+            for c in range(0, width - k, k):
+                patch = gray_norm[r:r+k, c:c+k]
+                local_var[r:r+k, c:c+k] = np.var(patch)
+
+        texture_depth = 1.0 - np.clip(local_var * 50, 0, 0.4)
+
+        brightness_depth = 1.0 - gray_norm * 0.3
+
+        depth = positional_depth * 0.5 + texture_depth * 0.25 + brightness_depth * 0.25
 
         return depth.astype(np.float32)
 

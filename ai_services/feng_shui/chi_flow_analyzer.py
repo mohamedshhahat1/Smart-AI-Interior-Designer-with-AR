@@ -191,7 +191,39 @@ class ChiFlowAnalyzer:
                 penalty += 0.5
 
         if room_type == "office" and "desk" in labels:
-            pass
+            if "door" not in labels:
+                issues.append({
+                    "issue_type": "commanding_position",
+                    "severity": "medium",
+                    "location": "office",
+                    "description": "Door not visible from desk position — you should always see the entrance while working",
+                    "impact": "Subconscious anxiety, reduced authority, missed opportunities",
+                })
+                penalty += 1.0
+
+            electronics = {"laptop", "tv", "monitor", "computer"}
+            if len(labels & electronics) > 1:
+                issues.append({
+                    "issue_type": "desk_clutter",
+                    "severity": "low",
+                    "location": "office desk",
+                    "description": "Multiple electronics on desk create excess yang energy — keep only what you actively use",
+                    "impact": "Mental overwhelm, difficulty focusing",
+                })
+                penalty += 0.5
+
+            book_items = {"book", "bookshelf"}
+            if labels & book_items:
+                east_note = ROOM_CHI_RULES.get("office", {}).get("clear_desk", "")
+                if east_note:
+                    issues.append({
+                        "issue_type": "desk_surface",
+                        "severity": "low",
+                        "location": "office desk",
+                        "description": east_note,
+                        "impact": "Cluttered surfaces scatter mental energy",
+                    })
+                    penalty += 0.3
 
         if room_type == "kitchen":
             if "sink" in labels and "oven" in labels:

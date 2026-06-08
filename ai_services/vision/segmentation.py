@@ -19,7 +19,7 @@ class RoomSegmenter:
                 self.model = sam_model_registry[model_type](checkpoint=checkpoint)
                 self.predictor = SamPredictor(self.model)
             except ImportError:
-                self.model = "mock"
+                self.model = "heuristic"
                 self.predictor = None
 
     def segment_room(self, image_path: str) -> dict:
@@ -34,13 +34,17 @@ class RoomSegmenter:
             wall_mask = self._segment_region(image, "wall", width, height)
             floor_mask = self._segment_region(image, "floor", width, height)
             ceiling_mask = self._segment_region(image, "ceiling", width, height)
+            method = "sam"
         else:
-            wall_mask = self._estimate_walls(height, width)
-            floor_mask = self._estimate_floor(height, width)
-            ceiling_mask = self._estimate_ceiling(height, width)
+            ceiling_end, floor_start = self._find_transitions(image, height, width)
+            wall_mask = self._estimate_walls(height, width, ceiling_end, floor_start)
+            floor_mask = self._estimate_floor(height, width, floor_start)
+            ceiling_mask = self._estimate_ceiling(height, width, ceiling_end)
+            method = "heuristic"
 
         return {
             "image_dimensions": {"width": width, "height": height},
+            "method": method,
             "walls": {
                 "detected": True,
                 "area_percentage": float(np.sum(wall_mask) / (width * height) * 100),
@@ -96,19 +100,56 @@ class RoomSegmenter:
             ]
         return [[width // 2, height // 2]]
 
-    def _estimate_walls(self, height: int, width: int) -> np.ndarray:
+    def _find_transitions(self, image: np.ndarray, height: int, width: int) -> tuple[int, int]:
+        gray = np.mean(image, axis=2)
+        num_bands = 20
+        band_h = height // num_bands
+        band_means = [
+            float(np.mean(gray[i * band_h : (i + 1) * band_h, :]))
+            for i in range(num_bands)
+        ]
+        band_vars = [
+            float(np.var(image[i * band_h : (i + 1) * band_h, :].reshape(-1, 3), axis=0).mean())
+            for i in range(num_bands)
+        ]
+
+        ceiling_end = height // 6
+        max_diff = 0
+        for i in range(1, num_bands // 3):
+            diff = abs(band_means[i] - band_means[i - 1]) + abs(band_vars[i] - band_vars[i - 1]) * 0.1
+            if diff > max_diff:
+                max_diff = diff
+                ceiling_end = i * band_h
+        ceiling_end = max(height // 10, min(ceiling_end, height // 4))
+
+        floor_start = 2 * height // 3
+        max_diff = 0
+        for i in range(num_bands - 1, num_bands * 2 // 3, -1):
+            diff = abs(band_means[i] - band_means[i - 1]) + abs(band_vars[i] - band_vars[i - 1]) * 0.1
+            if diff > max_diff:
+                max_diff = diff
+                floor_start = i * band_h
+        floor_start = max(height // 2, min(floor_start, 4 * height // 5))
+
+        return ceiling_end, floor_start
+
+    def _estimate_walls(self, height: int, width: int, ceiling_end: int = 0, floor_start: int = 0) -> np.ndarray:
         mask = np.zeros((height, width), dtype=bool)
-        mask[height // 6 : 2 * height // 3, :] = True
+        c = ceiling_end or height // 6
+        f = floor_start or (2 * height // 3)
+        mask[c:f, :] = True
         return mask
 
-    def _estimate_floor(self, height: int, width: int) -> np.ndarray:
+    def _estimate_floor(self, height: int, width: int, floor_start: int = 0) -> np.ndarray:
         mask = np.zeros((height, width), dtype=bool)
-        mask[2 * height // 3 :, :] = True
+        f = floor_start or (2 * height // 3)
+        mask[f:, :] = True
         return mask
 
-    def _estimate_ceiling(self, height: int, width: int) -> np.ndarray:
+    def _estimate_ceiling(self, height: int, width: int, ceiling_end: int = 0) -> np.ndarray:
         mask = np.zeros((height, width), dtype=bool)
-        mask[: height // 6, :] = True
+        c = ceiling_end or height // 6
+        mask[:c, :] = True
         return mask
 
 
