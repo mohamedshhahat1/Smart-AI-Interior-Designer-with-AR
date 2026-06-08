@@ -12,13 +12,14 @@ class ControlNetPipeline:
         self._sdxl_model_id = "stabilityai/stable-diffusion-xl-base-1.0"
         self._controlnet_model_id = "diffusers/controlnet-canny-sdxl-1.0"
 
-    def _is_model_cached(self) -> bool:
-        import os
-        cache_dir = os.environ.get("HF_HOME", os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"))
-        if not cache_dir.endswith("hub"):
-            cache_dir = os.path.join(cache_dir, "hub")
-        model_dir = os.path.join(cache_dir, "models--" + self._sdxl_model_id.replace("/", "--"))
-        return os.path.isdir(model_dir)
+    def _has_enough_vram(self, required_gb: float = 7.0) -> bool:
+        if self.device != "cuda":
+            return False
+        try:
+            total = torch.cuda.get_device_properties(0).total_mem
+            return total >= required_gb * (1024 ** 3)
+        except Exception:
+            return False
 
     def load_model(self):
         if self.pipe is not None:
@@ -26,7 +27,7 @@ class ControlNetPipeline:
         if self.pipe == "unavailable":
             return
 
-        if not self._is_model_cached():
+        if not self._has_enough_vram():
             self.pipe = "unavailable"
             return
 
