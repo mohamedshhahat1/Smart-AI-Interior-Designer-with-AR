@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:ar_flutter_plugin_2/ar_flutter_plugin.dart';
@@ -174,15 +177,19 @@ class _ARViewScreenState extends State<ARViewScreen> {
     );
 
     _arObjectManager!.onInitialize();
-    _arObjectManager!.onNodeTap = _onNodeTapped;
+    _arObjectManager!.onNodeTap = _onNodeTappedByName;
     _arSessionManager!.onPlaneOrPointTap = _onPlaneOrPointTapped;
-
-    _arAnchorManager!.initAnchorManager();
   }
 
-  void _onNodeTapped(List<ARNode> tappedNodes) {
-    if (tappedNodes.isEmpty) return;
-    final node = tappedNodes.first;
+  void _onNodeTappedByName(List<String> nodeNames) {
+    if (nodeNames.isEmpty) return;
+    final tappedName = nodeNames.first;
+    final node = _placedNodes.cast<ARNode?>().firstWhere(
+      (n) => n?.name == tappedName,
+      orElse: () => null,
+    );
+    if (node == null) return;
+
     setState(() {
       if (_selectedNode == node) {
         _selectedNode = null;
@@ -195,7 +202,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
     if (_selectedNode != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${node.name?.split('_').first ?? "Item"} selected — pinch to resize'),
+          content: Text('${tappedName.split('_').first} selected — pinch to resize'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -322,14 +329,38 @@ class _ARViewScreenState extends State<ARViewScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<Uint8List?> _takeSnapshot() async {
+    try {
+      final imageProvider = await _arSessionManager?.snapshot();
+      if (imageProvider == null) return null;
+      final completer = Completer<Uint8List>();
+      final stream = imageProvider.resolve(const ImageConfiguration());
+      late ImageStreamListener listener;
+      listener = ImageStreamListener((info, _) {
+        final byteData = info.image.toByteData(format: ui.ImageByteFormat.png);
+        byteData.then((data) {
+          completer.complete(data?.buffer.asUint8List());
+        });
+        stream.removeListener(listener);
+      }, onError: (error, _) {
+        completer.completeError(error);
+        stream.removeListener(listener);
+      });
+      stream.addListener(listener);
+      return await completer.future;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _captureScene() async {
     try {
-      final image = await _arSessionManager?.snapshot();
-      if (image != null) {
+      final bytes = await _takeSnapshot();
+      if (bytes != null) {
         final dir = await getApplicationDocumentsDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final file = File('${dir.path}/ar_capture_$timestamp.png');
-        await file.writeAsBytes(image);
+        await file.writeAsBytes(bytes);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -359,12 +390,12 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   Future<void> _shareScene() async {
     try {
-      final image = await _arSessionManager?.snapshot();
-      if (image != null) {
+      final bytes = await _takeSnapshot();
+      if (bytes != null) {
         final dir = await getApplicationDocumentsDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final file = File('${dir.path}/ar_share_$timestamp.png');
-        await file.writeAsBytes(image);
+        await file.writeAsBytes(bytes);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
