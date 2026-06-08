@@ -56,6 +56,173 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showEditProfileDialog() {
+    final nameController = TextEditingController(text: _user?['name'] ?? '');
+    final emailController = TextEditingController(text: _user?['email'] ?? '');
+    final formKey = GlobalKey<FormState>();
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Edit Profile'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)),
+                  validator: (v) => v != null && v.length >= 2 ? null : 'Name must be at least 2 characters',
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                  validator: (v) => v != null && v.contains('@') ? null : 'Enter a valid email',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => isSaving = true);
+                      try {
+                        await _apiService.updateProfile(
+                          name: nameController.text.trim(),
+                          email: emailController.text.trim(),
+                        );
+                        if (mounted) Navigator.pop(ctx);
+                        _loadProfile();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Profile updated')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString().contains('409') ? 'Email already in use' : 'Update failed')),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSaving = false;
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: currentController,
+                  obscureText: obscureCurrent,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                    ),
+                  ),
+                  validator: (v) => v != null && v.isNotEmpty ? null : 'Enter current password',
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: newController,
+                  obscureText: obscureNew,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                    ),
+                  ),
+                  validator: (v) => v != null && v.length >= 8 ? null : 'Must be at least 8 characters',
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: confirmController,
+                  obscureText: obscureNew,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm New Password',
+                    prefixIcon: Icon(Icons.lock),
+                  ),
+                  validator: (v) => v == newController.text ? null : 'Passwords do not match',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => isSaving = true);
+                      try {
+                        await _apiService.changePassword(
+                          currentPassword: currentController.text,
+                          newPassword: newController.text,
+                        );
+                        if (mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Password changed successfully')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString().contains('400') ? 'Current password is incorrect' : 'Password change failed')),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -173,16 +340,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildStatsRow(),
           const SizedBox(height: 24),
           _buildSectionTitle('Account'),
-          _buildMenuItem(Icons.person_outline, 'Edit Profile', () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile editing coming soon')),
-            );
-          }),
-          _buildMenuItem(Icons.lock_outline, 'Change Password', () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Password change coming soon')),
-            );
-          }),
+          _buildMenuItem(Icons.person_outline, 'Edit Profile', _showEditProfileDialog),
+          _buildMenuItem(Icons.lock_outline, 'Change Password', _showChangePasswordDialog),
           const SizedBox(height: 16),
           _buildSectionTitle('My Rooms'),
           if (_rooms.isEmpty)

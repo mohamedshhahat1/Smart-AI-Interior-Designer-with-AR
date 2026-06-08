@@ -13,6 +13,16 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class RoomUploadRequest(BaseModel):
     room_type: Optional[str] = None
 

@@ -194,6 +194,24 @@ class ApiService {
     return response.data;
   }
 
+  Future<Map<String, dynamic>> updateProfile({String? name, String? email}) async {
+    final response = await _dio.patch('/auth/me', data: {
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+    });
+    return response.data;
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _dio.post('/auth/change-password', data: {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
   Future<List<DesignModel>> listDesigns({String? roomId}) async {
     final queryParams = <String, dynamic>{};
     if (roomId != null) queryParams['room_id'] = roomId;

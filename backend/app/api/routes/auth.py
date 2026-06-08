@@ -1,3 +1,4 @@
+import uuid as _uuid
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -6,11 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db
 from backend.app.models.user import User
-from backend.app.schemas.request_models import UserRegisterRequest, UserLoginRequest
+from backend.app.schemas.request_models import (
+    UserRegisterRequest, UserLoginRequest,
+    UpdateProfileRequest, ChangePasswordRequest,
+)
 from backend.app.schemas.response_models import UserResponse, TokenResponse
 from backend.app.core.security import (
     hash_password, verify_password,
     create_access_token, create_refresh_token, decode_token,
+    get_current_user_id,
 )
 from backend.app.core.limiter import limiter
 from backend.app.core.config import get_settings
@@ -105,22 +110,9 @@ async def refresh_token(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
-    request: Request,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    from backend.app.core.security import get_current_user_id
-
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-
-    token = auth_header.split(" ", 1)[1]
-    payload = decode_token(token, expected_type="access")
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    import uuid as _uuid
     result = await db.execute(select(User).where(User.id == _uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user:
@@ -130,6 +122,55 @@ async def get_current_user(
         id=str(user.id), name=user.name, email=user.email,
         is_active=user.is_active, created_at=user.created_at,
     )
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == _uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if body.name is not None:
+        user.name = body.name
+
+    if body.email is not None and body.email != user.email:
+        existing = await db.execute(select(User).where(User.email == body.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
+        user.email = body.email
+
+    await db.flush()
+
+    return UserResponse(
+        id=str(user.id), name=user.name, email=user.email,
+        is_active=user.is_active, created_at=user.created_at,
+    )
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == _uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+
+    user.hashed_password = hash_password(body.new_password)
+    await db.flush()
+
+    logger.info("Password changed for user: %s", user.email)
+    return {"detail": "Password changed successfully"}
 
 
 @router.post("/logout")
