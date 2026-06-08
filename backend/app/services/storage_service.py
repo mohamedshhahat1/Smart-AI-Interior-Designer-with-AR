@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 from datetime import timedelta
 
@@ -34,8 +35,27 @@ class StorageService:
             if not self._client.bucket_exists(BUCKET_NAME):
                 self._client.make_bucket(BUCKET_NAME)
                 logger.info("Created MinIO bucket: %s", BUCKET_NAME)
+            self._set_public_read_policy()
         except S3Error as e:
             logger.error("Failed to create bucket: %s", e)
+
+    def _set_public_read_policy(self):
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"],
+                }
+            ],
+        }
+        try:
+            self._client.set_bucket_policy(BUCKET_NAME, json.dumps(policy))
+            logger.info("Set public read policy on bucket: %s", BUCKET_NAME)
+        except S3Error as e:
+            logger.warning("Failed to set bucket policy: %s", e)
 
     def upload_bytes(self, object_name: str, data: bytes, content_type: str = "image/jpeg") -> str:
         self.client.put_object(

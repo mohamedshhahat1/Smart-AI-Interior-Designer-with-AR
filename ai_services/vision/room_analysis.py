@@ -25,8 +25,17 @@ def _resolve_image(image_path: str) -> str:
 
     parsed = urlparse(image_path)
     if parsed.scheme in ("http", "https"):
-        response = httpx.get(image_path, timeout=30.0)
-        response.raise_for_status()
+        try:
+            response = httpx.get(image_path, timeout=30.0, follow_redirects=True)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise FileNotFoundError(
+                f"Failed to download image from {image_path}: HTTP {e.response.status_code}"
+            ) from e
+        except httpx.RequestError as e:
+            raise FileNotFoundError(
+                f"Cannot reach image storage at {image_path}: {e}"
+            ) from e
 
         ext = os.path.splitext(parsed.path)[-1] or ".jpg"
         tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
