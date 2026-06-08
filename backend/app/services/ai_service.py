@@ -9,7 +9,7 @@ settings = get_settings()
 class AIService:
     def __init__(self):
         self.base_url = settings.ai_service_url
-        self.client = httpx.AsyncClient(timeout=120.0)
+        self.client = httpx.AsyncClient(timeout=600.0)
 
     async def analyze_room(self, image_url: str) -> dict:
         response = await self.client.post(

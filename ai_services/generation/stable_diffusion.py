@@ -7,19 +7,10 @@ from pathlib import Path
 
 
 class StableDiffusionGenerator:
-    def __init__(self, model_id: str = "stabilityai/stable-diffusion-xl-base-1.0"):
+    def __init__(self, model_id: str = "stable-diffusion-v1-5/stable-diffusion-v1-5"):
         self.model_id = model_id
         self.pipe = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    def _has_enough_vram(self, required_gb: float = 7.0) -> bool:
-        if self.device != "cuda":
-            return False
-        try:
-            total = torch.cuda.get_device_properties(0).total_mem
-            return total >= required_gb * (1024 ** 3)
-        except Exception:
-            return False
 
     def load_model(self):
         if self.pipe is not None:
@@ -27,23 +18,15 @@ class StableDiffusionGenerator:
         if self.pipe == "unavailable":
             return
 
-        if not self._has_enough_vram():
-            self.pipe = "unavailable"
-            return
-
         try:
-            from diffusers import StableDiffusionXLPipeline
+            from diffusers import StableDiffusionPipeline
 
-            self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            self.pipe = StableDiffusionPipeline.from_pretrained(
                 self.model_id,
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                use_safetensors=True,
-                variant="fp16" if self.device == "cuda" else None,
+                safety_checker=None,
             )
             self.pipe = self.pipe.to(self.device)
-
-            if self.device == "cuda":
-                self.pipe.enable_model_cpu_offload()
         except Exception:
             self.pipe = "unavailable"
 
@@ -51,8 +34,8 @@ class StableDiffusionGenerator:
         self,
         positive_prompt: str,
         negative_prompt: str = "",
-        width: int = 1024,
-        height: int = 1024,
+        width: int = 512,
+        height: int = 512,
         num_inference_steps: int = 30,
         guidance_scale: float = 7.5,
         seed: Optional[int] = None,

@@ -9,17 +9,6 @@ class ControlNetPipeline:
         self.pipe = None
         self.controlnet = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._sdxl_model_id = "stabilityai/stable-diffusion-xl-base-1.0"
-        self._controlnet_model_id = "diffusers/controlnet-canny-sdxl-1.0"
-
-    def _has_enough_vram(self, required_gb: float = 7.0) -> bool:
-        if self.device != "cuda":
-            return False
-        try:
-            total = torch.cuda.get_device_properties(0).total_mem
-            return total >= required_gb * (1024 ** 3)
-        except Exception:
-            return False
 
     def load_model(self):
         if self.pipe is not None:
@@ -27,29 +16,21 @@ class ControlNetPipeline:
         if self.pipe == "unavailable":
             return
 
-        if not self._has_enough_vram():
-            self.pipe = "unavailable"
-            return
-
         try:
-            from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
+            from diffusers import ControlNetModel, StableDiffusionControlNetPipeline
 
             self.controlnet = ControlNetModel.from_pretrained(
-                "diffusers/controlnet-canny-sdxl-1.0",
+                "lllyasviel/control_v11p_sd15_canny",
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                use_safetensors=True,
             )
 
-            self.pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
-                "stabilityai/stable-diffusion-xl-base-1.0",
+            self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
+                "stable-diffusion-v1-5/stable-diffusion-v1-5",
                 controlnet=self.controlnet,
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                use_safetensors=True,
+                safety_checker=None,
             )
             self.pipe = self.pipe.to(self.device)
-
-            if self.device == "cuda":
-                self.pipe.enable_model_cpu_offload()
         except Exception:
             self.pipe = "unavailable"
 
@@ -105,7 +86,7 @@ class ControlNetPipeline:
         preserve_strength: float = 0.5,
         seed: Optional[int] = None,
     ) -> Image.Image:
-        target_size = (1024, 1024)
+        target_size = (512, 512)
         control_image = original_image.resize(target_size, Image.Resampling.LANCZOS)
 
         return self.generate_with_structure(
