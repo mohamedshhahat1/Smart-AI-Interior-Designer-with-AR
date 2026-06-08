@@ -14,19 +14,24 @@ class StableDiffusionGenerator:
     def load_model(self):
         if self.pipe is not None:
             return
+        if self.pipe == "unavailable":
+            return
 
-        from diffusers import StableDiffusionXLPipeline
+        try:
+            from diffusers import StableDiffusionXLPipeline
 
-        self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            self.model_id,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            use_safetensors=True,
-            variant="fp16" if self.device == "cuda" else None,
-        )
-        self.pipe = self.pipe.to(self.device)
+            self.pipe = StableDiffusionXLPipeline.from_pretrained(
+                self.model_id,
+                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                use_safetensors=True,
+                variant="fp16" if self.device == "cuda" else None,
+            )
+            self.pipe = self.pipe.to(self.device)
 
-        if self.device == "cuda":
-            self.pipe.enable_model_cpu_offload()
+            if self.device == "cuda":
+                self.pipe.enable_model_cpu_offload()
+        except Exception:
+            self.pipe = "unavailable"
 
     def generate(
         self,

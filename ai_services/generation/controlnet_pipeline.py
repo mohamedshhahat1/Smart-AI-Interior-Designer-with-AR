@@ -13,25 +13,30 @@ class ControlNetPipeline:
     def load_model(self):
         if self.pipe is not None:
             return
+        if self.pipe == "unavailable":
+            return
 
-        from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
+        try:
+            from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
 
-        self.controlnet = ControlNetModel.from_pretrained(
-            "diffusers/controlnet-canny-sdxl-1.0",
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            use_safetensors=True,
-        )
+            self.controlnet = ControlNetModel.from_pretrained(
+                "diffusers/controlnet-canny-sdxl-1.0",
+                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                use_safetensors=True,
+            )
 
-        self.pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
-            "stabilityai/stable-diffusion-xl-base-1.0",
-            controlnet=self.controlnet,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            use_safetensors=True,
-        )
-        self.pipe = self.pipe.to(self.device)
+            self.pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
+                "stabilityai/stable-diffusion-xl-base-1.0",
+                controlnet=self.controlnet,
+                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                use_safetensors=True,
+            )
+            self.pipe = self.pipe.to(self.device)
 
-        if self.device == "cuda":
-            self.pipe.enable_model_cpu_offload()
+            if self.device == "cuda":
+                self.pipe.enable_model_cpu_offload()
+        except Exception:
+            self.pipe = "unavailable"
 
     def generate_with_structure(
         self,

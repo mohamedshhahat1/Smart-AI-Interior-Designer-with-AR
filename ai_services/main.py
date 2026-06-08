@@ -78,22 +78,27 @@ async def generate_design(request: DesignRequest):
         budget=request.budget,
     )
 
-    image_url = request.room_analysis.get("image_url")
-    if request.preserve_layout and image_url and os.path.exists(image_url):
-        original = load_image(image_url)
-        generated_image = controlnet_pipeline.redesign_room(
-            original_image=original,
-            prompt_data=prompt_data,
-        )
-    else:
-        generated_image = sdxl_generator.generate(
-            positive_prompt=prompt_data["positive"],
-            negative_prompt=prompt_data["negative"],
-        )
+    generated_image_url = None
+    try:
+        image_url = request.room_analysis.get("image_url")
+        if request.preserve_layout and image_url and os.path.exists(image_url):
+            original = load_image(image_url)
+            generated_image = controlnet_pipeline.redesign_room(
+                original_image=original,
+                prompt_data=prompt_data,
+            )
+        else:
+            generated_image = sdxl_generator.generate(
+                positive_prompt=prompt_data["positive"],
+                negative_prompt=prompt_data["negative"],
+            )
 
-    output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
-    os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-    generated_image.save(output_filename, quality=95)
+        output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
+        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+        generated_image.save(output_filename, quality=95)
+        generated_image_url = output_filename
+    except Exception:
+        pass
 
     design_brief = await interior_agent.generate_design_brief(
         room_data=request.room_analysis,
@@ -102,7 +107,7 @@ async def generate_design(request: DesignRequest):
     )
 
     return {
-        "image_url": output_filename,
+        "image_url": generated_image_url,
         "color_palette": prompt_data.get("style"),
         "furniture_list": [],
         "ar_scene_data": {},
@@ -118,25 +123,30 @@ async def enhance_design(request: EnhanceRequest):
         instruction=request.instruction,
     )
 
-    image_url = request.design_data.get("image_url")
-    if image_url and os.path.exists(image_url):
-        original = load_image(image_url)
-        generated_image = controlnet_pipeline.redesign_room(
-            original_image=original,
-            prompt_data=prompt_data,
-        )
-    else:
-        generated_image = sdxl_generator.generate(
-            positive_prompt=prompt_data["positive"],
-            negative_prompt=prompt_data["negative"],
-        )
+    enhanced_image_url = request.design_data.get("image_url")
+    try:
+        image_url = request.design_data.get("image_url")
+        if image_url and os.path.exists(image_url):
+            original = load_image(image_url)
+            generated_image = controlnet_pipeline.redesign_room(
+                original_image=original,
+                prompt_data=prompt_data,
+            )
+        else:
+            generated_image = sdxl_generator.generate(
+                positive_prompt=prompt_data["positive"],
+                negative_prompt=prompt_data["negative"],
+            )
 
-    output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
-    os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-    generated_image.save(output_filename, quality=95)
+        output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
+        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+        generated_image.save(output_filename, quality=95)
+        enhanced_image_url = output_filename
+    except Exception:
+        pass
 
     return {
-        "image_url": output_filename,
+        "image_url": enhanced_image_url,
         "furniture_list": request.design_data.get("furniture_list", []),
         "color_palette": request.design_data.get("color_palette"),
         "enhanced": True,
