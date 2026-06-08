@@ -13,12 +13,11 @@ class StableDiffusionGenerator:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def _is_model_cached(self) -> bool:
-        try:
-            from huggingface_hub import try_to_load_from_cache
-            result = try_to_load_from_cache(self.model_id, "model_index.json")
-            return isinstance(result, str)
-        except Exception:
-            return False
+        cache_dir = os.environ.get("HF_HOME", os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"))
+        if not cache_dir.endswith("hub"):
+            cache_dir = os.path.join(cache_dir, "hub")
+        model_dir = os.path.join(cache_dir, "models--" + self.model_id.replace("/", "--"))
+        return os.path.isdir(model_dir)
 
     def load_model(self):
         if self.pipe is not None:

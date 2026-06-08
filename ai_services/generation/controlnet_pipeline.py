@@ -13,12 +13,12 @@ class ControlNetPipeline:
         self._controlnet_model_id = "diffusers/controlnet-canny-sdxl-1.0"
 
     def _is_model_cached(self) -> bool:
-        try:
-            from huggingface_hub import try_to_load_from_cache
-            result = try_to_load_from_cache(self._sdxl_model_id, "model_index.json")
-            return isinstance(result, str)
-        except Exception:
-            return False
+        import os
+        cache_dir = os.environ.get("HF_HOME", os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"))
+        if not cache_dir.endswith("hub"):
+            cache_dir = os.path.join(cache_dir, "hub")
+        model_dir = os.path.join(cache_dir, "models--" + self._sdxl_model_id.replace("/", "--"))
+        return os.path.isdir(model_dir)
 
     def load_model(self):
         if self.pipe is not None:
