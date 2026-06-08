@@ -120,7 +120,7 @@ class HouseRoomDesignResponse(BaseModel):
     room_id: Optional[str] = None
     generated_image_url: Optional[str] = None
     room_color_palette: Optional[dict] = None
-    furniture_list: Optional[dict] = None
+    furniture_list: Optional[list] = None
     estimated_cost: Optional[float] = None
     design_notes: Optional[str] = None
     status: str

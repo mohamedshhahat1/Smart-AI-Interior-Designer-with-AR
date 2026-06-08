@@ -15,6 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _apiService = ApiService();
   Map<String, dynamic>? _user;
   List<Map<String, dynamic>> _rooms = [];
+  int _designCount = 0;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -37,6 +38,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       try {
         final roomsResponse = await ApiClient().dio.get('/room/');
         _rooms = (roomsResponse.data as List).cast<Map<String, dynamic>>();
+      } catch (_) {}
+
+      try {
+        final designsResponse = await ApiClient().dio.get('/design/');
+        _designCount = (designsResponse.data as List).length;
       } catch (_) {}
 
       if (mounted) setState(() => _isLoading = false);
@@ -220,8 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _buildStat('Rooms', _rooms.length.toString()),
-        _buildStat('Designs', '-'),
-        _buildStat('AR Sessions', '-'),
+        _buildStat('Designs', _designCount.toString()),
       ],
     );
   }

@@ -337,12 +337,25 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
                   const SizedBox(height: 16),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: double.infinity,
-                      height: 220,
-                      color: Colors.grey[200],
-                      child: const Center(child: Icon(Icons.image, size: 64, color: Colors.grey)),
-                    ),
+                    child: room.generatedImageUrl != null && room.generatedImageUrl!.isNotEmpty
+                        ? Image.network(
+                            room.generatedImageUrl!,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: double.infinity,
+                              height: 220,
+                              color: Colors.grey[200],
+                              child: const Center(child: Icon(Icons.broken_image, size: 64, color: Colors.grey)),
+                            ),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            height: 220,
+                            color: Colors.grey[200],
+                            child: const Center(child: Icon(Icons.image, size: 64, color: Colors.grey)),
+                          ),
                   ),
                   const SizedBox(height: 16),
                   if (room.estimatedCost != null)
