@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 class StableDiffusionGenerator:
-    def __init__(self, model_id: str = "stable-diffusion-v1-5/stable-diffusion-v1-5"):
+    def __init__(self, model_id: str = "nota-ai/bk-sdm-small"):
         self.model_id = model_id
         self.pipe = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

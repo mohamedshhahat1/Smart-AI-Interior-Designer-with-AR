@@ -25,7 +25,7 @@ class ControlNetPipeline:
             )
 
             self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
-                "stable-diffusion-v1-5/stable-diffusion-v1-5",
+                "nota-ai/bk-sdm-small",
                 controlnet=self.controlnet,
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 safety_checker=None,
