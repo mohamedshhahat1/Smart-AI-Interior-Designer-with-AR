@@ -18,7 +18,7 @@ class RoomSegmenter:
                 checkpoint = self.model_path or "sam_vit_h_4b8939.pth"
                 self.model = sam_model_registry[model_type](checkpoint=checkpoint)
                 self.predictor = SamPredictor(self.model)
-            except ImportError:
+            except (ImportError, FileNotFoundError, Exception):
                 self.model = "heuristic"
                 self.predictor = None
 

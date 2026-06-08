@@ -22,7 +22,7 @@ class DepthEstimator:
                 self.transform = midas_transforms.dpt_transform
             else:
                 self.transform = midas_transforms.small_transform
-        except ImportError:
+        except (ImportError, Exception):
             self.model = "heuristic"
 
     def estimate_depth(self, image_path: str) -> dict:
