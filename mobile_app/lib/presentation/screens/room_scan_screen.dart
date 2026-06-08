@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/constants/app_constants.dart';
 import 'package:smart_interior_ai/data/services/api_service.dart';
@@ -16,7 +18,7 @@ class RoomScanScreen extends StatefulWidget {
   State<RoomScanScreen> createState() => _RoomScanScreenState();
 }
 
-class _RoomScanScreenState extends State<RoomScanScreen> {
+class _RoomScanScreenState extends State<RoomScanScreen> with WidgetsBindingObserver {
   final _apiService = ApiService();
   final _picker = ImagePicker();
   File? _selectedImage;
@@ -25,9 +27,168 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
   bool _isAnalyzing = false;
   String? _selectedStyle;
 
-  Future<void> _pickImage(ImageSource source) async {
+  CameraController? _cameraController;
+  bool _isCameraOpen = false;
+  bool _isCameraInitializing = false;
+  FlashMode _flashMode = FlashMode.auto;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    if (state == AppLifecycleState.inactive) {
+      _cameraController?.dispose();
+      _cameraController = null;
+    } else if (state == AppLifecycleState.resumed && _isCameraOpen) {
+      _initCamera();
+    }
+  }
+
+  Future<void> _initCamera() async {
+    setState(() => _isCameraInitializing = true);
+
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        setState(() => _isCameraInitializing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Camera permission is required')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) {
+          setState(() => _isCameraInitializing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No camera found on this device')),
+          );
+        }
+        return;
+      }
+
+      final backCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      _cameraController?.dispose();
+      _cameraController = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+
+      await _cameraController!.initialize();
+      await _cameraController!.setFlashMode(_flashMode);
+
+      if (mounted) {
+        setState(() {
+          _isCameraOpen = true;
+          _isCameraInitializing = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+      if (mounted) {
+        setState(() => _isCameraInitializing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Camera error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _capturePhoto() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    if (_cameraController!.value.isTakingPicture) return;
+
+    try {
+      final xFile = await _cameraController!.takePicture();
+      final bytes = await xFile.readAsBytes();
+
+      _cameraController?.dispose();
+      _cameraController = null;
+
+      if (mounted) {
+        setState(() {
+          _selectedXFile = xFile;
+          _selectedImageBytes = bytes;
+          if (!kIsWeb) {
+            _selectedImage = File(xFile.path);
+          }
+          _isCameraOpen = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Capture error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Capture failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  void _closeCamera() {
+    _cameraController?.dispose();
+    _cameraController = null;
+    setState(() => _isCameraOpen = false);
+  }
+
+  void _toggleFlash() {
+    if (_cameraController == null) return;
+    setState(() {
+      switch (_flashMode) {
+        case FlashMode.auto:
+          _flashMode = FlashMode.always;
+          break;
+        case FlashMode.always:
+          _flashMode = FlashMode.off;
+          break;
+        default:
+          _flashMode = FlashMode.auto;
+      }
+    });
+    _cameraController!.setFlashMode(_flashMode);
+  }
+
+  IconData get _flashIcon {
+    switch (_flashMode) {
+      case FlashMode.auto:
+        return Icons.flash_auto;
+      case FlashMode.always:
+        return Icons.flash_on;
+      case FlashMode.off:
+        return Icons.flash_off;
+      default:
+        return Icons.flash_auto;
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
     final picked = await _picker.pickImage(
-      source: source,
+      source: ImageSource.gallery,
       maxWidth: AppConstants.maxImageDimension,
       imageQuality: AppConstants.imageQuality,
     );
@@ -92,6 +253,10 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCameraOpen) {
+      return _buildCameraView();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Room'),
@@ -119,6 +284,101 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
     );
   }
 
+  Widget _buildCameraView() {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_cameraController != null &&
+                _cameraController!.value.isInitialized)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: _cameraController!.value.aspectRatio,
+                  child: CameraPreview(_cameraController!),
+                ),
+              )
+            else
+              const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                    style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                    onPressed: _closeCamera,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      'Point at your room',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(_flashIcon, color: Colors.white, size: 28),
+                    style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                    onPressed: _toggleFlash,
+                  ),
+                ],
+              ),
+            ),
+
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.photo_library,
+                        color: Colors.white, size: 30),
+                    onPressed: () {
+                      _closeCamera();
+                      _pickFromGallery();
+                    },
+                  ),
+                  GestureDetector(
+                    onTap: _capturePhoto,
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCaptureOptions() {
     return Column(
       children: [
@@ -131,9 +391,16 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () => _pickImage(ImageSource.camera),
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Take Photo'),
+            onPressed: _isCameraInitializing ? null : _initCamera,
+            icon: _isCameraInitializing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.camera_alt),
+            label: Text(_isCameraInitializing ? 'Opening Camera...' : 'Take Photo'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -145,7 +412,7 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () => _pickImage(ImageSource.gallery),
+            onPressed: _pickFromGallery,
             icon: const Icon(Icons.photo_library),
             label: const Text('Choose from Gallery'),
             style: OutlinedButton.styleFrom(
@@ -179,6 +446,15 @@ class _RoomScanScreenState extends State<RoomScanScreen> {
                 _selectedImageBytes = null;
                 _selectedXFile = null;
               }),
+            ),
+          ),
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(Icons.camera_alt, color: Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.black54),
+              onPressed: _initCamera,
             ),
           ),
         ],
