@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
+
 
 TOXIC_PLANTS = {
     "lilies": {"toxic_to": ["cat"], "severity": "critical", "effect": "Kidney failure — even small amounts are lethal to cats"},
@@ -73,14 +75,26 @@ class SafetyAnalyzer:
                 label = (obj.get("label", "") if isinstance(obj, dict) else str(obj)).lower()
 
                 if label in ("plant", "potted plant", "potted_plant"):
-                    for plant_name, info in TOXIC_PLANTS.items():
-                        if any(s in info["toxic_to"] for s in species_set):
-                            plant_report["toxic"].append({
-                                "plant": plant_name.replace("_", " ").title(),
-                                "toxic_to": [s for s in species_set if s in info["toxic_to"]],
-                                "severity": info["severity"],
-                                "effect": info["effect"],
-                            })
+                    critical_plants = [
+                        (name, info) for name, info in TOXIC_PLANTS.items()
+                        if info["severity"] == "critical"
+                        and any(s in info["toxic_to"] for s in species_set)
+                    ]
+                    for plant_name, info in critical_plants:
+                        plant_report["toxic"].append({
+                            "plant": plant_name.replace("_", " ").title(),
+                            "toxic_to": [s for s in species_set if s in info["toxic_to"]],
+                            "severity": info["severity"],
+                            "effect": info["effect"],
+                        })
+                    if not plant_report.get("_advisory_added"):
+                        plant_report["_advisory_added"] = True
+                        plant_report["toxic"].append({
+                            "plant": "Unidentified Plant",
+                            "toxic_to": list(species_set),
+                            "severity": "advisory",
+                            "effect": "Many common houseplants are toxic to pets — identify your specific plant species to check safety",
+                        })
                     plant_report["safe_alternatives"] = [
                         p for p in SAFE_PLANTS
                         if any(s in p["safe_for"] for s in species_set)
@@ -133,6 +147,17 @@ class SafetyAnalyzer:
         hazards.extend(room_hazards)
         safety_score -= len(room_hazards) * 0.5
 
+        plant_report.pop("_advisory_added", None)
+
+        if hazards and is_available():
+            species_str = ", ".join(species_set)
+            for h in hazards[:5]:
+                llm_solution = self._get_llm_solution(
+                    h["item"], h["description"], room_type, species_str
+                )
+                if llm_solution:
+                    h["solution"] = llm_solution
+
         return {
             "hazards": hazards,
             "plant_safety": plant_report,
@@ -169,7 +194,55 @@ class SafetyAnalyzer:
                 "solution": "Keep toilet lid closed, store chemicals in locked cabinets",
                 "estimated_cost": 15,
             })
+        elif room_type == "bedroom":
+            if "cat" in species or "dog" in species:
+                hazards.append({
+                    "hazard_type": "room_specific",
+                    "severity": "medium",
+                    "item": "medications on nightstand",
+                    "description": "Common medications (ibuprofen, acetaminophen, antidepressants) are highly toxic to pets",
+                    "solution": "Store all medications in closed drawers or medicine cabinets",
+                    "estimated_cost": 0,
+                })
+            if "cat" in species:
+                hazards.append({
+                    "hazard_type": "room_specific",
+                    "severity": "medium",
+                    "item": "window without secure screen",
+                    "description": "Cats can fall from open windows (high-rise syndrome)",
+                    "solution": "Install secure window screens or limit opening width to under 5 cm",
+                    "estimated_cost": 30,
+                })
+        elif room_type == "living_room":
+            if "dog" in species or "cat" in species:
+                hazards.append({
+                    "hazard_type": "room_specific",
+                    "severity": "medium",
+                    "item": "accessible trash and small objects",
+                    "description": "Remote controls, batteries, coins, and rubber bands can cause choking or poisoning",
+                    "solution": "Use pet-proof trash cans and keep small objects in closed containers",
+                    "estimated_cost": 25,
+                })
+            if "bird" in species:
+                hazards.append({
+                    "hazard_type": "room_specific",
+                    "severity": "high",
+                    "item": "ceiling fans",
+                    "description": "Ceiling fans are a collision hazard for free-flying birds",
+                    "solution": "Turn off ceiling fans when birds are out of cage, or use fan guards",
+                    "estimated_cost": 20,
+                })
         return hazards
+
+    def _get_llm_solution(self, item: str, description: str, room_type: str, species: str) -> str | None:
+        prompt = (
+            f"Pet safety: '{item}' in a {room_type} with {species}. "
+            f"Issue: {description}. Give one specific, actionable solution in 1-2 sentences."
+        )
+        raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=100)
+        if raw and len(raw.strip()) > 10:
+            return raw.strip()
+        return None
 
     def _estimate_fix_cost(self, severity: str) -> float:
         return {"critical": 100, "high": 60, "medium": 30, "low": 10}.get(severity, 25)

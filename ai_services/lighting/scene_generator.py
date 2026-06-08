@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, is_available
+
 
 MOOD_LIGHTING_PROFILES = {
     "relaxed": {
@@ -234,18 +236,35 @@ class SceneGenerator:
                 "purpose": z["purpose"],
             })
 
+        description = profile["description"]
+        ambiance_notes = profile["ambiance"]
+
+        if is_available():
+            prompt = (
+                f"Write two short texts for a {mood} lighting scene in a {room_type or 'room'} "
+                f"at {time_of_day or 'any'} time. Color temperature: {color_temp}K, brightness: {round(brightness * 100)}%.\n"
+                f"1) 'description': one sentence describing the lighting feel.\n"
+                f"2) 'ambiance_notes': 2-3 sentences with practical advice on fixture placement and layering.\n"
+                f"Return plain text, description on line 1, ambiance on line 2+."
+            )
+            raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=250)
+            if raw and "\n" in raw.strip():
+                lines = raw.strip().split("\n", 1)
+                description = lines[0].strip().strip('"')
+                ambiance_notes = lines[1].strip().strip('"')
+
         return {
             "color_temperature": color_temp,
             "brightness": round(brightness, 2),
             "color_hex": profile["color_hex"],
             "saturation": profile["saturation"],
-            "description": profile["description"],
+            "description": description,
             "mood": mood,
             "time_of_day": time_of_day or "any",
             "fixtures": fixtures,
             "zones": zones,
             "transition_duration": transition,
-            "ambiance_notes": profile["ambiance"],
+            "ambiance_notes": ambiance_notes,
         }
 
     def generate_alternatives(

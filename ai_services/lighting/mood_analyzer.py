@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
+
 
 MOOD_KEYWORDS = {
     "relaxed": {
@@ -78,6 +80,67 @@ TIME_MOOD_WEIGHTS = {
 
 
 class MoodAnalyzer:
+    def _try_llm_analysis(
+        self,
+        text_input: Optional[str],
+        time_of_day: Optional[str],
+        activity: Optional[str],
+        energy_level: Optional[float],
+    ) -> dict | None:
+        if not is_available():
+            return None
+
+        valid_moods = list(MOOD_KEYWORDS.keys())
+        parts = []
+        if text_input:
+            parts.append(f"User says: \"{text_input}\"")
+        if time_of_day:
+            parts.append(f"Time of day: {time_of_day}")
+        if activity:
+            parts.append(f"Current activity: {activity}")
+        if energy_level is not None:
+            parts.append(f"Energy level: {energy_level:.0%}")
+
+        if not parts:
+            return None
+
+        context = "\n".join(parts)
+        prompt = (
+            f"Analyze the user's mood for interior lighting. Context:\n{context}\n\n"
+            f"Choose the primary mood from ONLY these options: {', '.join(valid_moods)}.\n"
+            f"Return JSON: {{\"detected_mood\": \"...\", \"confidence\": 0.0-0.99, "
+            f"\"suggested_moods\": [\"alt1\", \"alt2\"], \"energy_level\": 0.0-1.0, \"warmth_score\": 0.0-1.0}}"
+        )
+
+        raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=200)
+        data = parse_llm_json(raw)
+        if not data or data.get("detected_mood") not in valid_moods:
+            return None
+
+        mood = data["detected_mood"]
+        mood_config = MOOD_KEYWORDS[mood]
+        suggested = [m for m in data.get("suggested_moods", []) if m in valid_moods][:3]
+
+        source_parts = []
+        if text_input:
+            source_parts.append("text")
+        if activity:
+            source_parts.append("activity")
+        if time_of_day:
+            source_parts.append("time")
+        if energy_level is not None:
+            source_parts.append("energy")
+
+        return {
+            "detected_mood": mood,
+            "confidence": min(float(data.get("confidence", 0.85)), 0.99),
+            "energy_level": float(data.get("energy_level", mood_config["energy"])),
+            "warmth_score": float(data.get("warmth_score", mood_config["warmth"])),
+            "suggested_moods": suggested,
+            "analysis_source": "llm+" + "+".join(source_parts) if source_parts else "llm",
+            "all_scores": {mood: round(float(data.get("confidence", 0.85)), 3)},
+        }
+
     def analyze(
         self,
         text_input: Optional[str] = None,
@@ -85,6 +148,10 @@ class MoodAnalyzer:
         activity: Optional[str] = None,
         energy_level: Optional[float] = None,
     ) -> dict:
+        llm_result = self._try_llm_analysis(text_input, time_of_day, activity, energy_level)
+        if llm_result:
+            return llm_result
+
         scores = {mood: 0.0 for mood in MOOD_KEYWORDS}
 
         if text_input:

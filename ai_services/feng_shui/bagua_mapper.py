@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, is_available
+
 
 BAGUA_ZONES = {
     "south": {
@@ -89,7 +91,7 @@ class BaguaMapper:
 
         for direction, zone_data in BAGUA_ZONES.items():
             score = self._evaluate_zone(
-                direction, zone_data, room_type, detected_objects
+                direction, zone_data, room_type, detected_objects, compass_direction
             )
 
             status = "balanced"
@@ -127,6 +129,7 @@ class BaguaMapper:
         zone_data: dict,
         room_type: str,
         detected_objects: Optional[list[dict]],
+        compass_direction: Optional[str] = None,
     ) -> float:
         score = 5.0
 
@@ -140,6 +143,9 @@ class BaguaMapper:
 
         bonuses = room_zone_bonuses.get(room_type, {})
         score += bonuses.get(direction, 0)
+
+        if compass_direction and compass_direction.lower() == direction:
+            score += 1.5
 
         if detected_objects:
             element = zone_data["element"]
@@ -156,6 +162,16 @@ class BaguaMapper:
     def _suggest_zone_enhancement(
         self, direction: str, zone_data: dict, room_type: str
     ) -> str:
+        if is_available():
+            prompt = (
+                f"Give one concise feng shui enhancement tip for the {zone_data['zone']} "
+                f"({direction}) zone in a {room_type}. The governing element is {zone_data['element']}. "
+                f"Reply with a single actionable sentence, no JSON."
+            )
+            raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=100)
+            if raw and len(raw.strip()) > 10:
+                return raw.strip()
+
         enhancers = zone_data.get("enhancers", [])
         if enhancers:
             items = ", ".join(enhancers[:2])

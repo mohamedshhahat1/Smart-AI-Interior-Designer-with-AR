@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
+
 
 CURE_DATABASE = {
     "blocked_pathway": {
@@ -139,7 +141,21 @@ class CureRecommender:
             issue_type = issue.get("issue_type", "")
             severity = issue.get("severity", "medium")
             cure_data = CURE_DATABASE.get(issue_type)
+
             if not cure_data:
+                llm_cures = self._get_llm_cures(issue_type, issue.get("description", ""), room_type)
+                if llm_cures:
+                    for i, cure in enumerate(llm_cures):
+                        all_cures.append({
+                            "category": "llm_generated",
+                            "severity": severity,
+                            "issue_description": issue.get("description", ""),
+                            "cure_description": cure,
+                            "element": None,
+                            "placement": "as appropriate",
+                            "estimated_cost": None,
+                            "priority": self._severity_to_priority(severity, i),
+                        })
                 continue
 
             cures_list = cure_data.get("cures", [])
@@ -205,6 +221,20 @@ class CureRecommender:
             })
 
         return advice
+
+    def _get_llm_cures(self, issue_type: str, description: str, room_type: str) -> list[str] | None:
+        if not is_available():
+            return None
+
+        prompt = (
+            f"Feng shui issue in a {room_type}: '{issue_type}' — {description}. "
+            f"Suggest 2 practical feng shui cures. Return a JSON array of 2 strings."
+        )
+        raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=200)
+        data = parse_llm_json(raw)
+        if isinstance(data, list) and len(data) >= 1:
+            return [str(c) for c in data[:3]]
+        return None
 
     def _severity_to_priority(self, severity: str, index: int) -> int:
         base = {"high": 1, "medium": 3, "low": 5}.get(severity, 3)

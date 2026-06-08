@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
+
 
 SEASONAL_THEMES = {
     "spring": {
@@ -269,8 +271,12 @@ class ThemeGenerator:
 
         budget_mult = BUDGET_MULTIPLIERS.get(budget_tier, 1.0)
 
+        style_filter = self._get_style_categories(base_style) if base_style else None
+
         decor_items = []
         for d in source.get("decor", []):
+            if style_filter and d["category"] not in style_filter:
+                continue
             item = {
                 "name": d["name"],
                 "category": d["category"],
@@ -280,6 +286,17 @@ class ThemeGenerator:
                 "diy_possible": d.get("diy", False),
             }
             decor_items.append(item)
+
+        if not decor_items:
+            for d in source.get("decor", []):
+                decor_items.append({
+                    "name": d["name"],
+                    "category": d["category"],
+                    "placement": d["placement"],
+                    "estimated_cost": round(d.get("cost", 0) * budget_mult, 2),
+                    "reusable": d.get("reusable", True),
+                    "diy_possible": d.get("diy", False),
+                })
 
         if intensity < 0.5:
             decor_items = [d for d in decor_items if d["reusable"]][:3]
@@ -306,9 +323,26 @@ class ThemeGenerator:
         reusable_count = sum(1 for d in decor_items if d["reusable"])
         reusability = reusable_count / len(decor_items) if decor_items else 0.0
 
+        theme_name = source["name"]
+        theme_description = source["description"]
+
+        if is_available():
+            context = holiday or season or "seasonal"
+            style_note = f" in a {base_style} style" if base_style else ""
+            prompt = (
+                f"Create a short theme name (3-5 words) and one-sentence description for a "
+                f"{context}{style_note} interior design theme for a {room_type}.\n"
+                f"Return JSON: {{\"name\": \"...\", \"description\": \"...\"}}"
+            )
+            raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=150)
+            data = parse_llm_json(raw)
+            if data and data.get("name") and data.get("description"):
+                theme_name = data["name"]
+                theme_description = data["description"]
+
         return {
-            "name": source["name"],
-            "description": source["description"],
+            "name": theme_name,
+            "description": theme_description,
             "theme_type": theme_type,
             "season": season,
             "holiday": holiday,
@@ -324,6 +358,23 @@ class ThemeGenerator:
             "estimated_cost": round(total_cost, 2),
             "reusability_score": round(reusability, 2),
         }
+
+    def _get_style_categories(self, base_style: str) -> set[str]:
+        style_map = {
+            "minimalist": {"textiles", "lighting", "plants"},
+            "modern": {"textiles", "lighting", "wall_decor", "mirror", "plants"},
+            "traditional": {"centerpiece", "textiles", "lighting", "garland", "wall_decor"},
+            "rustic": {"centerpiece", "textiles", "accent", "garland", "storage"},
+            "bohemian": {"textiles", "plants", "wall_decor", "garland", "tabletop"},
+            "scandinavian": {"textiles", "lighting", "plants", "storage"},
+        }
+        cats = style_map.get(base_style.lower())
+        if cats:
+            return cats
+        return {"centerpiece", "textiles", "lighting", "wall_decor", "plants",
+                "garland", "accent", "mirror", "tabletop", "storage",
+                "focal_point", "door_decor", "traditional", "window",
+                "hospitality", "spiritual", "floor_art", "ambiance"}
 
     def generate_transition(
         self,

@@ -1,6 +1,20 @@
 import math
+import os
+import logging
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
+FURNITURE_COLORS = {
+    "sofa": [120, 120, 130, 255], "chair": [160, 120, 80, 255],
+    "bed": [200, 190, 180, 255], "desk": [100, 70, 50, 255],
+    "table": [160, 120, 80, 255], "coffee_table": [140, 100, 70, 255],
+    "tv": [30, 30, 30, 255], "tv_stand": [60, 50, 45, 255],
+    "lamp": [180, 160, 100, 255], "bookshelf": [140, 110, 70, 255],
+    "wardrobe": [220, 220, 210, 255], "plant": [60, 130, 60, 255],
+    "rug": [180, 160, 140, 255], "mirror": [200, 220, 230, 255],
+    "curtain": [190, 180, 170, 255],
+}
 
 FURNITURE_3D_CATALOG = {
     "sofa": {"width": 2.0, "height": 0.85, "depth": 0.9, "default_model": "models/sofa_modern.glb", "polygon_estimate": 8500},
@@ -222,6 +236,76 @@ class MeshGenerator:
             "plant": "ceramic_terracotta", "rug": "wool_cream", "mirror": "glass_clear",
         }
         return materials.get(label, "default_material")
+
+    def export_to_glb(
+        self,
+        room_geometry: dict,
+        furniture_objects: list[dict],
+        lighting: list[dict],
+        output_path: str,
+    ) -> str | None:
+        try:
+            import trimesh
+            import numpy as np
+        except ImportError:
+            logger.warning("trimesh not installed — cannot export GLB")
+            return None
+
+        scene = trimesh.Scene()
+        dims = room_geometry.get("dimensions", {"width": 5.0, "depth": 4.0, "height": 2.8})
+        w, d, h = dims["width"], dims["depth"], dims["height"]
+
+        floor = trimesh.creation.box(extents=[w, 0.02, d])
+        floor.apply_translation([w / 2, -0.01, d / 2])
+        floor.visual.face_colors = [180, 150, 110, 255]
+        scene.add_geometry(floor, node_name="floor")
+
+        ceiling = trimesh.creation.box(extents=[w, 0.02, d])
+        ceiling.apply_translation([w / 2, h + 0.01, d / 2])
+        ceiling.visual.face_colors = [245, 245, 240, 255]
+        scene.add_geometry(ceiling, node_name="ceiling")
+
+        wall_thickness = 0.08
+        walls = [
+            ("wall_north", [w, h, wall_thickness], [w / 2, h / 2, wall_thickness / 2]),
+            ("wall_south", [w, h, wall_thickness], [w / 2, h / 2, d - wall_thickness / 2]),
+            ("wall_east", [wall_thickness, h, d], [w - wall_thickness / 2, h / 2, d / 2]),
+            ("wall_west", [wall_thickness, h, d], [wall_thickness / 2, h / 2, d / 2]),
+        ]
+        for name, extents, translation in walls:
+            wall = trimesh.creation.box(extents=extents)
+            wall.apply_translation(translation)
+            wall.visual.face_colors = [235, 230, 220, 255]
+            scene.add_geometry(wall, node_name=name)
+
+        for obj in furniture_objects:
+            cat_key = obj.get("category", "")
+            cat = FURNITURE_3D_CATALOG.get(cat_key)
+            if not cat:
+                continue
+            fw, fh, fd = cat["width"], cat["height"], cat.get("depth", cat["width"])
+            pos = obj.get("position", {"x": 0, "y": 0, "z": 0})
+
+            mesh = trimesh.creation.box(extents=[fw, fh, fd])
+            mesh.apply_translation([pos["x"], pos.get("y", 0) + fh / 2, pos["z"]])
+
+            rot = obj.get("rotation", {})
+            y_rot = rot.get("y", 0)
+            if y_rot:
+                angle = math.radians(y_rot)
+                rotation_matrix = trimesh.transformations.rotation_matrix(
+                    angle, [0, 1, 0], [pos["x"], pos.get("y", 0) + fh / 2, pos["z"]]
+                )
+                mesh.apply_transform(rotation_matrix)
+
+            color = FURNITURE_COLORS.get(cat_key, [150, 150, 150, 255])
+            mesh.visual.face_colors = color
+            scene.add_geometry(mesh, node_name=obj.get("object_id", f"furniture_{cat_key}"))
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        scene.export(output_path)
+        logger.info("Exported GLB to %s", output_path)
+        return output_path
 
 
 mesh_generator = MeshGenerator()

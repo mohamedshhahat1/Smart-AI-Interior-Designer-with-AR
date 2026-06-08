@@ -1,5 +1,7 @@
+import os
 import uuid
 import time
+import logging
 from typing import Optional
 from datetime import datetime, timezone
 
@@ -12,6 +14,8 @@ from backend.app.models.room import Room
 from ai_services.reconstruction_3d.depth_estimator import depth_estimator
 from ai_services.reconstruction_3d.mesh_generator import mesh_generator
 from ai_services.reconstruction_3d.scene_builder import scene_builder
+
+logger = logging.getLogger(__name__)
 
 
 class Walkthrough3DService:
@@ -99,8 +103,29 @@ class Walkthrough3DService:
             model.polygon_count = scene["metadata"]["polygon_count"]
             model.file_size_mb = scene["metadata"]["file_size_mb"]
             model.processing_time_seconds = round(processing_time, 2)
-            model.glb_model_url = f"/storage/3d_models/{model.id}.glb"
-            model.usdz_model_url = f"/storage/3d_models/{model.id}.usdz" if "usdz" in (output_formats or []) else None
+
+            glb_path = f"/tmp/3d_models/{model.id}.glb"
+            exported = mesh_generator.export_to_glb(
+                room_geometry, furniture_objects, lighting_setup, glb_path
+            )
+
+            if exported and os.path.exists(glb_path):
+                model.file_size_mb = round(os.path.getsize(glb_path) / (1024 * 1024), 3)
+                try:
+                    from backend.app.services.storage_service import storage_service
+                    object_name = f"3d_models/{model.id}.glb"
+                    with open(glb_path, "rb") as f:
+                        storage_service.upload_bytes(
+                            object_name, f.read(), content_type="model/gltf-binary"
+                        )
+                    model.glb_model_url = storage_service.get_internal_url(object_name)
+                except Exception as e:
+                    logger.warning("MinIO upload failed, using local path: %s", e)
+                    model.glb_model_url = glb_path
+            else:
+                model.glb_model_url = f"/storage/3d_models/{model.id}.glb"
+
+            model.usdz_model_url = None
             model.status = "completed"
 
         except Exception as e:

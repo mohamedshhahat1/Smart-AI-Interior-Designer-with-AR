@@ -1,5 +1,7 @@
 from typing import Optional
 
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
+
 
 FIVE_ELEMENTS = {
     "wood": {
@@ -86,6 +88,15 @@ OBJECT_ELEMENTS = {
     "clock": "metal", "bookshelf": "wood", "plant": "wood",
     "rug": "earth", "curtain": "wood", "painting": "fire",
     "vase": "earth", "sculpture": "metal",
+    "refrigerator": "metal", "fridge": "metal", "oven": "fire", "stove": "fire",
+    "microwave": "fire", "sink": "water", "bathtub": "water", "shower": "water",
+    "toilet": "water", "washing machine": "metal", "dryer": "fire",
+    "computer": "fire", "monitor": "fire", "laptop": "fire", "phone": "fire",
+    "door": "wood", "window": "water", "fan": "metal", "air conditioner": "metal",
+    "heater": "fire", "radiator": "fire", "pillow": "earth", "blanket": "earth",
+    "cabinet": "wood", "shelf": "wood", "wardrobe": "wood", "dresser": "wood",
+    "coffee table": "wood", "nightstand": "wood", "ottoman": "earth",
+    "chandelier": "fire", "ceiling fan": "metal", "speaker": "metal",
 }
 
 
@@ -131,6 +142,24 @@ class ElementAnalyzer:
 
         return analysis
 
+    def _classify_object_element(self, label: str) -> str:
+        mapped = OBJECT_ELEMENTS.get(label.lower())
+        if mapped:
+            return mapped
+
+        if is_available():
+            prompt = (
+                f"In feng shui, which of the five elements (wood, fire, earth, metal, water) "
+                f"best represents '{label}'? Reply with a single word."
+            )
+            raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=20)
+            if raw:
+                word = raw.strip().lower().rstrip(".")
+                if word in ("wood", "fire", "earth", "metal", "water"):
+                    return word
+
+        return "earth"
+
     def _detect_current_elements(
         self, detected_objects: Optional[list[dict]]
     ) -> dict:
@@ -141,7 +170,7 @@ class ElementAnalyzer:
 
         for obj in detected_objects:
             label = obj.get("label", "") if isinstance(obj, dict) else str(obj)
-            element = OBJECT_ELEMENTS.get(label.lower(), "earth")
+            element = self._classify_object_element(label)
             counts[element] += 1
 
         total = sum(counts.values())
