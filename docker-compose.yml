@@ -47,6 +47,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MODEL_CACHE_DIR=/models
+      - HF_HOME=/models
       - PYTHONPATH=/app
     volumes:
       - model_cache:/models
