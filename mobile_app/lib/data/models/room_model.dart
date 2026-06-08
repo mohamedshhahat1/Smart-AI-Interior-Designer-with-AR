@@ -4,7 +4,7 @@ class RoomModel {
   final String imageUrl;
   final String? roomType;
   final double? area;
-  final Map<String, dynamic>? detectedObjects;
+  final List<dynamic>? detectedObjects;
   final DateTime createdAt;
 
   RoomModel({
@@ -24,7 +24,7 @@ class RoomModel {
       imageUrl: json['image_url'] as String,
       roomType: json['room_type'] as String?,
       area: (json['area'] as num?)?.toDouble(),
-      detectedObjects: json['detected_objects'] as Map<String, dynamic>?,
+      detectedObjects: json['detected_objects'] as List<dynamic>?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
