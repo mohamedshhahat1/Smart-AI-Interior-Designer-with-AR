@@ -28,7 +28,7 @@ CUSTOM_LABELS = [
 
 class ObjectDetector:
     def __init__(self, model_path: Optional[str] = None):
-        self.model_path = model_path or "yolov8n.pt"
+        self.model_path = model_path or "yolov8x.pt"
         self.model = None
         self.confidence_threshold = 0.35
 
