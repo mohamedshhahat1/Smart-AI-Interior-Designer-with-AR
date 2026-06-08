@@ -42,6 +42,10 @@ class _ARViewScreenState extends State<ARViewScreen> {
   final List<ARAnchor> _placedAnchors = [];
   List<Map<String, dynamic>> _sceneObjects = [];
 
+  ARNode? _selectedNode;
+  double _baseScaleFactor = 1.0;
+  double _currentScaleFactor = 1.0;
+
   static const _base = 'https://raw.githubusercontent.com/ToxSam/cc0-models-Polygonal-Mind/main/projects';
 
   static final _default3DModels = <String, String>{
@@ -170,9 +174,53 @@ class _ARViewScreenState extends State<ARViewScreen> {
     );
 
     _arObjectManager!.onInitialize();
+    _arObjectManager!.onNodeTap = _onNodeTapped;
     _arSessionManager!.onPlaneOrPointTap = _onPlaneOrPointTapped;
 
     _arAnchorManager!.initAnchorManager();
+  }
+
+  void _onNodeTapped(List<ARNode> tappedNodes) {
+    if (tappedNodes.isEmpty) return;
+    final node = tappedNodes.first;
+    setState(() {
+      if (_selectedNode == node) {
+        _selectedNode = null;
+      } else {
+        _selectedNode = node;
+        _currentScaleFactor = 1.0;
+        _baseScaleFactor = 1.0;
+      }
+    });
+    if (_selectedNode != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${node.name?.split('_').first ?? "Item"} selected — pinch to resize'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _onScaleStart(ScaleStartDetails details) {
+    if (_selectedNode == null || details.pointerCount < 2) return;
+    _baseScaleFactor = _currentScaleFactor;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    if (_selectedNode == null || details.pointerCount < 2) return;
+    final newFactor = (_baseScaleFactor * details.scale).clamp(0.1, 5.0);
+    final ratio = newFactor / _currentScaleFactor;
+    _selectedNode!.scale = _selectedNode!.scale * ratio;
+    setState(() => _currentScaleFactor = newFactor);
+  }
+
+  void _deselectNode() {
+    setState(() {
+      _selectedNode = null;
+      _currentScaleFactor = 1.0;
+      _baseScaleFactor = 1.0;
+    });
   }
 
   Future<void> _onPlaneOrPointTapped(List<ARHitTestResult> hitTestResults) async {
@@ -396,6 +444,12 @@ class _ARViewScreenState extends State<ARViewScreen> {
         foregroundColor: Colors.white,
         title: const Text('AR View'),
         actions: [
+          if (_selectedNode != null)
+            IconButton(
+              icon: const Icon(Icons.deselect),
+              onPressed: _deselectNode,
+              tooltip: 'Deselect',
+            ),
           if (_placedNodes.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.undo),
@@ -409,7 +463,10 @@ class _ARViewScreenState extends State<ARViewScreen> {
           ),
         ],
       ),
-      body: Stack(
+      body: GestureDetector(
+        onScaleStart: _onScaleStart,
+        onScaleUpdate: _onScaleUpdate,
+        child: Stack(
         children: [
           ARView(
             onARViewCreated: _onARViewCreated,
@@ -476,6 +533,37 @@ class _ARViewScreenState extends State<ARViewScreen> {
                 ),
               ),
             ),
+          if (_selectedNode != null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 90,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.open_with, color: Colors.white, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_selectedNode!.name?.split('_').first ?? "Item"} — ${(_currentScaleFactor * 100).round()}%',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _deselectNode,
+                        child: const Icon(Icons.close, color: Colors.white70, size: 18),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             bottom: 0,
             left: 0,
@@ -484,6 +572,7 @@ class _ARViewScreenState extends State<ARViewScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
