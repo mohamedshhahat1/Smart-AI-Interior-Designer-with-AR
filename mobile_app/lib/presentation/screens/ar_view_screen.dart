@@ -42,14 +42,48 @@ class _ARViewScreenState extends State<ARViewScreen> {
   final List<ARAnchor> _placedAnchors = [];
   List<Map<String, dynamic>> _sceneObjects = [];
 
-  static const _default3DModels = {
-    'Sofa': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-    'Table': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-    'Lamp': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-    'Chair': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-    'Bookshelf': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-    'Plant': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+  static const _base = 'https://raw.githubusercontent.com/ToxSam/cc0-models-Polygonal-Mind/main/projects';
+
+  static final _default3DModels = <String, String>{
+    'Sofa': '$_base/avatar-show/Sofa.glb',
+    'Table': '$_base/avatar-show/Table.glb',
+    'Lamp': '$_base/avatar-show/Lamp_Stand.glb',
+    'Chair': '$_base/avatar-show/Arm_Chair.glb',
+    'Bookshelf': '$_base/ca-world/Shelf_01_a.glb',
+    'Plant': '$_base/avatar-show/Banana_Plant.glb',
+    'Carpet': '$_base/avatar-show/Carpet.glb',
+    'Bench': '$_base/ca-world/Bench_01.glb',
+    'Stool': '$_base/ca-world/Stool_01.glb',
   };
+
+  static String _resolveModelUrl(String name) {
+    final lower = name.toLowerCase();
+    for (final entry in _default3DModels.entries) {
+      if (lower.contains(entry.key.toLowerCase())) return entry.value;
+    }
+    if (lower.contains('couch') || lower.contains('loveseat')) {
+      return _default3DModels['Sofa']!;
+    }
+    if (lower.contains('desk') || lower.contains('coffee table') || lower.contains('dining')) {
+      return _default3DModels['Table']!;
+    }
+    if (lower.contains('light') || lower.contains('chandelier') || lower.contains('sconce')) {
+      return _default3DModels['Lamp']!;
+    }
+    if (lower.contains('seat') || lower.contains('armchair') || lower.contains('recliner')) {
+      return _default3DModels['Chair']!;
+    }
+    if (lower.contains('cabinet') || lower.contains('shelf') || lower.contains('storage')) {
+      return _default3DModels['Bookshelf']!;
+    }
+    if (lower.contains('flower') || lower.contains('pot') || lower.contains('tree') || lower.contains('fern')) {
+      return _default3DModels['Plant']!;
+    }
+    if (lower.contains('rug') || lower.contains('mat')) {
+      return _default3DModels['Carpet']!;
+    }
+    return _default3DModels['Chair']!;
+  }
 
   @override
   void initState() {
@@ -172,10 +206,13 @@ class _ARViewScreenState extends State<ARViewScreen> {
         : vector.Vector3(0.2, 0.2, 0.2);
 
     final modelUrl = item['model_3d_url'] as String?;
+    final resolvedUrl = (modelUrl != null && modelUrl.isNotEmpty && !modelUrl.contains('Astronaut'))
+        ? modelUrl
+        : _resolveModelUrl(item['name'] as String? ?? 'Chair');
 
     final newNode = ARNode(
       type: NodeType.webGLB,
-      uri: modelUrl ?? 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+      uri: resolvedUrl,
       scale: scale,
       position: hit.worldTransform.getTranslation(),
       rotation: vector.Vector4(1.0, 0.0, 0.0, 0.0),
