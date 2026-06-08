@@ -9,11 +9,25 @@ class ControlNetPipeline:
         self.pipe = None
         self.controlnet = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._sdxl_model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+        self._controlnet_model_id = "diffusers/controlnet-canny-sdxl-1.0"
+
+    def _is_model_cached(self) -> bool:
+        try:
+            from huggingface_hub import try_to_load_from_cache
+            result = try_to_load_from_cache(self._sdxl_model_id, "model_index.json")
+            return isinstance(result, str)
+        except Exception:
+            return False
 
     def load_model(self):
         if self.pipe is not None:
             return
         if self.pipe == "unavailable":
+            return
+
+        if not self._is_model_cached():
+            self.pipe = "unavailable"
             return
 
         try:
