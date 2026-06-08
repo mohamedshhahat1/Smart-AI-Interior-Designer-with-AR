@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ai_services.utils.image_processing import extract_dominant_colors
+from ai_services.utils.llm_client import get_llm_response_sync, parse_llm_json, is_available
 
 
 class ConsistencyEngine:
@@ -219,13 +220,45 @@ class ConsistencyEngine:
     def suggest_shared_elements(
         self, room_types: list[str], style: str
     ) -> dict:
-        return {
+        result = {
             "flooring": self._suggest_flooring(style),
             "wall_treatment": self._suggest_walls(style),
             "trim_and_molding": self._suggest_trim(style),
             "door_hardware": self._suggest_hardware(style),
             "lighting_temperature": self._suggest_light_temp(style),
         }
+
+        generic_count = sum(
+            1 for v in result.values()
+            if (isinstance(v, dict) and "Consistent" in v.get("note", ""))
+            or (isinstance(v, str) and v.startswith("Consistent"))
+        )
+        if generic_count >= 3 and is_available():
+            llm_result = self._llm_suggest_shared_elements(room_types, style)
+            if llm_result:
+                result.update(llm_result)
+
+        return result
+
+    def _llm_suggest_shared_elements(
+        self, room_types: list[str], style: str
+    ) -> dict | None:
+        rooms_str = ", ".join(room_types) if room_types else "general rooms"
+        prompt = (
+            f"For a '{style}' style home with {rooms_str}, suggest shared design elements.\n"
+            f"Return a JSON object with these keys:\n"
+            f'- "flooring": {{"material": "...", "color": "...", "note": "..."}}\n'
+            f'- "wall_treatment": {{"treatment": "...", "accent": "...", "note": "..."}}\n'
+            f'- "trim_and_molding": "one line description"\n'
+            f'- "door_hardware": "one line description"\n'
+            f'- "lighting_temperature": "one line description"\n'
+            f"Be specific to the {style} style."
+        )
+        raw = get_llm_response_sync([{"role": "user", "content": prompt}], max_tokens=400)
+        data = parse_llm_json(raw)
+        if isinstance(data, dict) and any(k in data for k in ("flooring", "wall_treatment")):
+            return data
+        return None
 
     def _suggest_flooring(self, style: str) -> dict:
         options = {

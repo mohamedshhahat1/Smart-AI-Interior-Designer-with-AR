@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
 import 'package:smart_interior_ai/data/models/walkthrough_3d_model.dart';
@@ -26,26 +29,13 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
     'high': 'High',
     'ultra': 'Ultra'
   };
+  Timer? _walkthroughTimer;
+
   final _methods = {
     'depth_estimation': {
       'label': 'Depth Estimation',
       'icon': Icons.layers,
       'desc': 'Fast single-image 3D from depth map'
-    },
-    'nerf': {
-      'label': 'NeRF',
-      'icon': Icons.blur_circular,
-      'desc': 'Neural radiance field from multiple views'
-    },
-    'gaussian_splatting': {
-      'label': 'Gaussian Splatting',
-      'icon': Icons.grain,
-      'desc': 'Real-time 3D from point clouds'
-    },
-    'multi_view': {
-      'label': 'Multi-View Stereo',
-      'icon': Icons.view_carousel,
-      'desc': 'Classical reconstruction from image pairs'
     },
   };
 
@@ -58,6 +48,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _walkthroughTimer?.cancel();
     super.dispose();
   }
 
@@ -72,7 +63,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
         'include_furniture': true,
         'include_lighting': true,
         'generate_walkthrough_path': true,
-        'output_formats': ['glb', 'usdz'],
+        'output_formats': ['glb'],
       });
       setState(() {
         _model = Room3DModelData.fromJson(response.data);
@@ -265,79 +256,38 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
     if (_model == null)
       return _emptyState('Generate a 3D model first', Icons.view_in_ar);
 
+    final glbUrl = _model!.glbModelUrl;
+    if (glbUrl == null || glbUrl.isEmpty) {
+      return _emptyState('No 3D model file available', Icons.error_outline);
+    }
+
     return Column(children: [
       Expanded(
-        child: Container(
-          color: const Color(0xFF1A1A2E),
-          child: Stack(children: [
-            Center(
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                  Icon(Icons.view_in_ar,
-                      size: 80, color: Colors.white.withOpacity(0.3)),
-                  const SizedBox(height: 16),
-                  Text('3D Room Viewer',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.6), fontSize: 18)),
-                  const SizedBox(height: 8),
-                  Text(
-                      '${_model!.polygonCount ?? 0} polygons • ${_model!.fileSizeMb?.toStringAsFixed(1) ?? "?"} MB',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.4), fontSize: 13)),
-                  if (_model!.processingTimeSeconds != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                        'Generated in ${_model!.processingTimeSeconds!.toStringAsFixed(1)}s',
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
-                            fontSize: 12)),
-                  ],
-                ])),
-            Positioned(
-                right: 12,
-                top: 12,
-                child: Column(children: [
-                  _viewerButton(Icons.zoom_in, 'Zoom In'),
-                  _viewerButton(Icons.zoom_out, 'Zoom Out'),
-                  _viewerButton(Icons.rotate_left, 'Rotate'),
-                  _viewerButton(Icons.grid_on, 'Grid'),
-                  _viewerButton(Icons.light_mode, 'Lighting'),
-                ])),
-            if (_model!.furnitureObjects != null)
-              Positioned(
-                  left: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                        '${_model!.furnitureObjects!.length} objects placed',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
-                  )),
-          ]),
+        child: ModelViewer(
+          src: glbUrl,
+          alt: '3D Room Model',
+          ar: true,
+          autoRotate: true,
+          cameraControls: true,
+          backgroundColor: const Color(0xFF1A1A2E),
         ),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        color: Colors.grey[100],
+        child: Row(children: [
+          Text(
+              '${_model!.polygonCount ?? 0} polygons • ${_model!.fileSizeMb?.toStringAsFixed(1) ?? "?"} MB',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          const Spacer(),
+          if (_model!.furnitureObjects != null)
+            Text('${_model!.furnitureObjects!.length} objects',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        ]),
       ),
       if (_model!.cameraPositions != null) _buildCameraBar(),
     ]);
   }
-
-  Widget _viewerButton(IconData icon, String tooltip) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Tooltip(
-            message: tooltip,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, color: Colors.white, size: 20),
-            )),
-      );
 
   Widget _buildCameraBar() {
     return Container(
@@ -402,8 +352,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
               SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => setState(
-                        () => _isWalkthroughPlaying = !_isWalkthroughPlaying),
+                    onPressed: _toggleWalkthrough,
                     icon: Icon(
                         _isWalkthroughPlaying ? Icons.pause : Icons.play_arrow),
                     label: Text(_isWalkthroughPlaying
@@ -421,15 +370,23 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
           const SizedBox(height: 12),
           ...List.generate(_model!.walkthroughPath!.length, (i) {
             final point = _model!.walkthroughPath![i];
+            final isActive = _isWalkthroughPlaying && _currentCameraIndex == i;
             return Card(
                 margin: const EdgeInsets.only(bottom: 8),
+                color: isActive
+                    ? AppTheme.primaryColor.withOpacity(0.08)
+                    : null,
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    backgroundColor: isActive
+                        ? AppTheme.primaryColor
+                        : AppTheme.primaryColor.withOpacity(0.1),
                     child: Text('${i + 1}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor)),
+                            color: isActive
+                                ? Colors.white
+                                : AppTheme.primaryColor)),
                   ),
                   title: Text('Waypoint ${i + 1}',
                       style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -463,6 +420,37 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
                 ))),
           ],
         ]));
+  }
+
+  void _toggleWalkthrough() {
+    setState(() {
+      _isWalkthroughPlaying = !_isWalkthroughPlaying;
+      if (_isWalkthroughPlaying) {
+        final path = _model!.walkthroughPath!;
+        _walkthroughTimer?.cancel();
+        _walkthroughTimer = Timer.periodic(
+          Duration(
+              milliseconds:
+                  (path[_currentCameraIndex].durationSeconds * 1000).round()),
+          (_) {
+            if (!mounted) {
+              _walkthroughTimer?.cancel();
+              return;
+            }
+            setState(() {
+              _currentCameraIndex =
+                  (_currentCameraIndex + 1) % path.length;
+              if (_currentCameraIndex == 0) {
+                _isWalkthroughPlaying = false;
+                _walkthroughTimer?.cancel();
+              }
+            });
+          },
+        );
+      } else {
+        _walkthroughTimer?.cancel();
+      }
+    });
   }
 
   double _totalDuration() =>
