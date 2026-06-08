@@ -173,10 +173,62 @@ Please provide:
             response = self.gemini_model.generate_content(combined)
             return response.text
 
-        raise RuntimeError(
-            "No LLM provider configured. Set OPENAI_API_KEY or GOOGLE_API_KEY "
-            "environment variable to enable the AI assistant."
-        )
+        return self._generate_fallback_response(messages)
+
+    def _generate_fallback_response(self, messages: list[dict]) -> str:
+        user_msg = ""
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                user_msg = msg["content"]
+                break
+
+        style = "modern"
+        room_type = "room"
+        for keyword in ["minimalist", "scandinavian", "bohemian", "industrial", "traditional", "contemporary", "rustic", "modern"]:
+            if keyword in user_msg.lower():
+                style = keyword
+                break
+        for rt in ["living room", "bedroom", "kitchen", "bathroom", "dining room", "office"]:
+            if rt in user_msg.lower():
+                room_type = rt
+                break
+
+        return f"""Interior Design Brief — {style.title()} {room_type.title()}
+
+1. Color Palette:
+   - Primary: Neutral tones (white, light gray, beige)
+   - Secondary: Warm wood tones and soft textures
+   - Accent: Muted earth tones for contrast
+
+2. Furniture Recommendations:
+   - Streamlined, functional pieces with clean lines
+   - Multi-purpose furniture for space optimization
+   - Quality over quantity — fewer, well-chosen items
+
+3. Lighting Plan:
+   - Layered lighting: ambient, task, and accent
+   - Natural light maximization with sheer curtains
+   - Warm white LED fixtures (2700K-3000K)
+
+4. Decoration & Accessories:
+   - Indoor plants for natural freshness
+   - Textured throw pillows and blankets
+   - Minimal wall art with cohesive theme
+
+5. Estimated Cost Breakdown:
+   - Furniture: $1,500 - $3,000
+   - Lighting: $200 - $500
+   - Decor: $300 - $600
+   - Total: $2,000 - $4,100
+
+6. Priority Order:
+   1. Declutter and clean the space
+   2. Paint or update wall colors
+   3. Key furniture pieces
+   4. Lighting fixtures
+   5. Decorative accessories
+
+Note: For personalized AI-powered recommendations, configure an OpenAI or Google API key."""
 
     def _extract_suggestions(self, response_text: str) -> list[str]:
         suggestions = []
