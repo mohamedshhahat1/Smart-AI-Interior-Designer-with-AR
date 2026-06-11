@@ -34,6 +34,12 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
 
   Future<void> _loadOrGenerateDesign() async {
     setState(() => _isLoading = true);
+    // When the user explicitly requested a style, always generate that style
+    // instead of returning a previously generated design for the room.
+    if (widget.style != null && widget.style!.isNotEmpty) {
+      await _generateDesign();
+      return;
+    }
     try {
       final existing = await _apiService.listDesigns(roomId: widget.roomId);
       if (existing.isNotEmpty) {

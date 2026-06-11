@@ -32,7 +32,7 @@ const _publicRoutes = ['/login', '/register'];
 final _router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) async {
-    final isLoggedIn = await ApiClient().hasToken();
+    final isLoggedIn = await ApiClient().hasValidSession();
     final isPublicRoute = _publicRoutes.contains(state.matchedLocation);
 
     if (!isLoggedIn && !isPublicRoute) return '/login';

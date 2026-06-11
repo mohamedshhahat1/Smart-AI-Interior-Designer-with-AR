@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
+import 'package:smart_interior_ai/data/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedNavIndex = 0;
   List<Map<String, dynamic>> _recentDesigns = [];
   bool _isLoadingDesigns = true;
+  final _apiService = ApiService();
 
   @override
   void initState() {
@@ -76,6 +78,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Resolves a real design id for the most recent room before navigating to a
+  /// design-dependent route (AR / Cost). The home list holds room ids, but those
+  /// routes require a design id, so we look up the room's designs first.
+  Future<void> _openDesignRoute(String prefix, String emptyMessage) async {
+    if (_recentDesigns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emptyMessage)),
+      );
+      return;
+    }
+    final roomId = _recentDesigns.first['id'].toString();
+    try {
+      final designs = await _apiService.listDesigns(roomId: roomId);
+      if (!mounted) return;
+      if (designs.isNotEmpty) {
+        context.go('$prefix/${designs.first.id}');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Generate a design for this room first')),
+        );
+        context.go('/design/$roomId');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load designs for this room')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,15 +161,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'AR View',
                     subtitle: 'See in your room',
                     color: AppTheme.accentColor,
-                    onTap: () {
-                      if (_recentDesigns.isNotEmpty) {
-                        context.go('/ar/${_recentDesigns.first['id']}');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Generate a design first to use AR view')),
-                        );
-                      }
-                    },
+                    onTap: () => _openDesignRoute(
+                      '/ar',
+                      'Generate a design first to use AR view',
+                    ),
                   )),
                 ],
               ),
@@ -169,15 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Cost',
                     subtitle: 'Estimate budget',
                     color: AppTheme.warningColor,
-                    onTap: () {
-                      if (_recentDesigns.isNotEmpty) {
-                        context.go('/cost/${_recentDesigns.first['id']}');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Generate a design first to estimate costs')),
-                        );
-                      }
-                    },
+                    onTap: () => _openDesignRoute(
+                      '/cost',
+                      'Generate a design first to estimate costs',
+                    ),
                   )),
                 ],
               ),
