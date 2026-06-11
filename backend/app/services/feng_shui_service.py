@@ -29,13 +29,22 @@ class FengShuiService:
         include_bagua: bool = True,
         include_element_analysis: bool = True,
     ) -> FengShuiAnalysis:
-        if room_id and not detected_objects:
-            result = await db.execute(select(Room).where(Room.id == uuid.UUID(room_id)))
+        if room_id:
+            result = await db.execute(
+                select(Room).where(
+                    Room.id == uuid.UUID(room_id),
+                    Room.user_id == uuid.UUID(user_id),
+                )
+            )
             room = result.scalar_one_or_none()
-            if room:
+            if not room:
+                raise ValueError("Room not found")
+            if not detected_objects:
                 detected_objects = room.detected_objects if isinstance(room.detected_objects, list) else []
-                if room.room_type:
-                    room_type = room.room_type
+            if not room_dimensions and isinstance(room.dimensions, dict):
+                room_dimensions = room.dimensions
+            if room.room_type:
+                room_type = room.room_type
 
         bagua_data = None
         if include_bagua:

@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.db.database import get_db
 from backend.app.models.house_project import HouseProject, HouseRoomDesign
+from backend.app.models.room import Room
 from backend.app.schemas.request_models import (
     HouseProjectCreateRequest,
     HouseProjectGenerateRequest,
@@ -32,6 +33,30 @@ async def create_house_project(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    validated_room_ids: dict[int, uuid.UUID] = {}
+    for index, room_entry in enumerate(request.rooms):
+        if not room_entry.room_id:
+            continue
+        try:
+            room_id = uuid.UUID(room_entry.room_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid room ID for {room_entry.room_label}",
+            ) from exc
+        room_result = await db.execute(
+            select(Room).where(
+                Room.id == room_id,
+                Room.user_id == uuid.UUID(user_id),
+            )
+        )
+        if not room_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Room not found for {room_entry.room_label}",
+            )
+        validated_room_ids[index] = room_id
+
     shared_theme = house_design_service.build_shared_theme(
         style=request.style,
         color_preferences=request.color_preferences,
@@ -62,7 +87,7 @@ async def create_house_project(
     for i, room_entry in enumerate(request.rooms):
         room_design = HouseRoomDesign(
             house_project_id=project.id,
-            room_id=uuid.UUID(room_entry.room_id) if room_entry.room_id else None,
+            room_id=validated_room_ids.get(i),
             room_label=room_entry.room_label,
             room_type=room_entry.room_type,
             order_index=i,
@@ -254,20 +279,38 @@ async def refine_room_design(
     room_design.design_notes = f"Refined: {request.instruction}"
     await db.flush()
 
-    return HouseRoomDesignResponse(
-        id=str(room_design.id),
-        room_label=room_design.room_label,
-        room_type=room_design.room_type,
-        order_index=room_design.order_index,
-        room_id=str(room_design.room_id) if room_design.room_id else None,
-        generated_image_url=room_design.generated_image_url,
-        room_color_palette=room_design.room_color_palette,
-        furniture_list=room_design.furniture_list,
-        estimated_cost=room_design.estimated_cost,
-        design_notes=room_design.design_notes,
-        status=room_design.status,
-        created_at=room_design.created_at,
+    return _room_design_to_response(room_design)
+
+
+@router.get("/room/{room_design_id}", response_model=HouseRoomDesignResponse)
+async def get_house_room_design(
+    room_design_id: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        parsed_id = uuid.UUID(room_design_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid house room design ID",
+        ) from exc
+
+    result = await db.execute(
+        select(HouseRoomDesign)
+        .join(HouseProject, HouseRoomDesign.house_project_id == HouseProject.id)
+        .where(
+            HouseRoomDesign.id == parsed_id,
+            HouseProject.user_id == uuid.UUID(user_id),
+        )
     )
+    room_design = result.scalar_one_or_none()
+    if not room_design:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="House room design not found",
+        )
+    return _room_design_to_response(room_design)
 
 
 @router.get("/project/{project_id}/cost", response_model=HouseCostReport)
@@ -315,20 +358,7 @@ def _project_to_response(project: HouseProject) -> HouseProjectResponse:
     sorted_rooms = sorted(project.room_designs, key=lambda r: r.order_index)
 
     rooms = [
-        HouseRoomDesignResponse(
-            id=str(rd.id),
-            room_label=rd.room_label,
-            room_type=rd.room_type,
-            order_index=rd.order_index,
-            room_id=str(rd.room_id) if rd.room_id else None,
-            generated_image_url=rd.generated_image_url,
-            room_color_palette=rd.room_color_palette,
-            furniture_list=rd.furniture_list,
-            estimated_cost=rd.estimated_cost,
-            design_notes=rd.design_notes,
-            status=rd.status,
-            created_at=rd.created_at,
-        )
+        _room_design_to_response(rd)
         for rd in sorted_rooms
     ]
 
@@ -352,4 +382,21 @@ def _project_to_response(project: HouseProject) -> HouseProjectResponse:
         rooms=rooms,
         created_at=project.created_at,
         updated_at=project.updated_at,
+    )
+
+
+def _room_design_to_response(room_design: HouseRoomDesign) -> HouseRoomDesignResponse:
+    return HouseRoomDesignResponse(
+        id=str(room_design.id),
+        room_label=room_design.room_label,
+        room_type=room_design.room_type,
+        order_index=room_design.order_index,
+        room_id=str(room_design.room_id) if room_design.room_id else None,
+        generated_image_url=room_design.generated_image_url,
+        room_color_palette=room_design.room_color_palette,
+        furniture_list=room_design.furniture_list,
+        estimated_cost=room_design.estimated_cost,
+        design_notes=room_design.design_notes,
+        status=room_design.status,
+        created_at=room_design.created_at,
     )

@@ -24,7 +24,12 @@ import 'package:smart_interior_ai/core/utils/api_client.dart';
 
 class ARViewScreen extends StatefulWidget {
   final String designId;
-  const ARViewScreen({super.key, required this.designId});
+  final bool isHouseRoomDesign;
+  const ARViewScreen({
+    super.key,
+    required this.designId,
+    this.isHouseRoomDesign = false,
+  });
 
   @override
   State<ARViewScreen> createState() => _ARViewScreenState();
@@ -50,49 +55,6 @@ class _ARViewScreenState extends State<ARViewScreen> {
   double _baseScaleFactor = 1.0;
   double _currentScaleFactor = 1.0;
 
-  static const _base = 'https://raw.githubusercontent.com/ToxSam/cc0-models-Polygonal-Mind/main/projects';
-
-  static final _default3DModels = <String, String>{
-    'Sofa': '$_base/avatar-show/Sofa.glb',
-    'Table': '$_base/avatar-show/Table.glb',
-    'Lamp': '$_base/avatar-show/Lamp_Stand.glb',
-    'Chair': '$_base/avatar-show/Arm_Chair.glb',
-    'Bookshelf': '$_base/ca-world/Shelf_01_a.glb',
-    'Plant': '$_base/avatar-show/Banana_Plant.glb',
-    'Carpet': '$_base/avatar-show/Carpet.glb',
-    'Bench': '$_base/ca-world/Bench_01.glb',
-    'Stool': '$_base/ca-world/Stool_01.glb',
-  };
-
-  static String _resolveModelUrl(String name) {
-    final lower = name.toLowerCase();
-    for (final entry in _default3DModels.entries) {
-      if (lower.contains(entry.key.toLowerCase())) return entry.value;
-    }
-    if (lower.contains('couch') || lower.contains('loveseat')) {
-      return _default3DModels['Sofa']!;
-    }
-    if (lower.contains('desk') || lower.contains('coffee table') || lower.contains('dining')) {
-      return _default3DModels['Table']!;
-    }
-    if (lower.contains('light') || lower.contains('chandelier') || lower.contains('sconce')) {
-      return _default3DModels['Lamp']!;
-    }
-    if (lower.contains('seat') || lower.contains('armchair') || lower.contains('recliner')) {
-      return _default3DModels['Chair']!;
-    }
-    if (lower.contains('cabinet') || lower.contains('shelf') || lower.contains('storage')) {
-      return _default3DModels['Bookshelf']!;
-    }
-    if (lower.contains('flower') || lower.contains('pot') || lower.contains('tree') || lower.contains('fern')) {
-      return _default3DModels['Plant']!;
-    }
-    if (lower.contains('rug') || lower.contains('mat')) {
-      return _default3DModels['Carpet']!;
-    }
-    return _default3DModels['Chair']!;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -116,7 +78,10 @@ class _ARViewScreenState extends State<ARViewScreen> {
 
   Future<void> _loadDesignData() async {
     try {
-      final designResponse = await ApiClient().dio.get('/design/${widget.designId}');
+      final sourcePath = widget.isHouseRoomDesign
+          ? '/house/room/${widget.designId}'
+          : '/design/${widget.designId}';
+      final designResponse = await ApiClient().dio.get(sourcePath);
       final data = designResponse.data;
       final furnitureList = data['furniture_list'];
 
@@ -134,26 +99,33 @@ class _ARViewScreenState extends State<ARViewScreen> {
       }
 
       try {
-        final arResponse = await ApiClient().dio.post('/ar/generate-scene', data: {
-          'design_id': widget.designId,
-        });
+        final arResponse = await ApiClient().dio.post('/ar/generate-scene', data:
+          widget.isHouseRoomDesign
+              ? {'house_room_design_id': widget.designId}
+              : {'design_id': widget.designId},
+        );
         final arData = arResponse.data;
         _sceneObjects = (arData['scene_objects'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       } catch (_) {}
 
-      if (items.isEmpty) {
-        items = _default3DModels.entries
-            .map((e) => {'name': e.key, 'category': 'furniture', 'model_3d_url': e.value})
-            .toList();
-      }
+      items = items.where((item) {
+        final modelUrl = item['model_3d_url'];
+        return modelUrl is String && modelUrl.isNotEmpty;
+      }).toList();
 
-      if (mounted) setState(() => _availableFurniture = items);
+      if (mounted) {
+        setState(() {
+          _availableFurniture = items;
+          if (items.isEmpty) {
+            _errorMessage = 'This design has no furniture with AR-ready 3D models.';
+          }
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _availableFurniture = _default3DModels.entries
-              .map((e) => {'name': e.key, 'category': 'furniture', 'model_3d_url': e.value})
-              .toList();
+          _availableFurniture = [];
+          _errorMessage = 'Could not load this design for AR.';
         });
       }
     }
@@ -262,13 +234,16 @@ class _ARViewScreenState extends State<ARViewScreen> {
         : vector.Vector3(0.2, 0.2, 0.2);
 
     final modelUrl = item['model_3d_url'] as String?;
-    final resolvedUrl = (modelUrl != null && modelUrl.isNotEmpty && !modelUrl.contains('Astronaut'))
-        ? modelUrl
-        : _resolveModelUrl(item['name'] as String? ?? 'Chair');
+    if (modelUrl == null || modelUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No AR model is available for this item')),
+      );
+      return;
+    }
 
     final newNode = ARNode(
       type: NodeType.webGLB,
-      uri: resolvedUrl,
+      uri: modelUrl,
       scale: scale,
       position: hit.worldTransform.getTranslation(),
       rotation: vector.Vector4(1.0, 0.0, 0.0, 0.0),

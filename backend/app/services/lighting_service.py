@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.lighting import LightingScene, MoodProfile, LightingAnalytics
@@ -172,7 +172,7 @@ class LightingService:
     ) -> list[MoodProfile]:
         result = await db.execute(
             select(MoodProfile)
-            .where(MoodProfile.user_id == uuid.UUID(user_id), MoodProfile.is_active == True)
+            .where(MoodProfile.user_id == uuid.UUID(user_id), MoodProfile.is_active)
             .order_by(MoodProfile.created_at.desc())
         )
         return list(result.scalars().all())

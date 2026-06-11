@@ -1,7 +1,11 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db
+from backend.app.models.room import Room
 from backend.app.schemas.request_models import (
     SeasonalThemeGenerateRequest,
     SeasonalTransitionRequest,
@@ -39,11 +43,34 @@ async def generate_seasonal_theme(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    room_type = request.room_type
+    if request.room_id:
+        try:
+            parsed_room_id = uuid.UUID(request.room_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid room ID",
+            ) from exc
+        result = await db.execute(
+            select(Room).where(
+                Room.id == parsed_room_id,
+                Room.user_id == uuid.UUID(user_id),
+            )
+        )
+        room = result.scalar_one_or_none()
+        if not room:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Room not found",
+            )
+        room_type = room.room_type or room_type
+
     theme_data = seasonal_service.generate_theme(
         theme_type=request.theme_type,
         season=request.season,
         holiday=request.holiday,
-        room_type=request.room_type,
+        room_type=room_type,
         budget_tier=request.budget_tier,
         intensity=request.intensity,
         base_style=request.base_style,

@@ -38,9 +38,9 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
 
   final _methods = {
     'depth_estimation': {
-      'label': 'Depth Estimation',
+      'label': 'Image-Informed Model',
       'icon': Icons.layers,
-      'desc': 'Fast single-image 3D from depth map'
+      'desc': 'Procedural room geometry sized from the scanned image and room analysis'
     },
   };
 
@@ -130,7 +130,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Text(
-            'Base the 3D model on a scanned room so its layout is used.',
+            'Use a scanned room to estimate dimensions and place detected objects.',
             style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         const SizedBox(height: 12),
         if (_loadingRooms)

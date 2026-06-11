@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 import time
@@ -52,14 +53,38 @@ class Walkthrough3DService:
         await db.flush()
 
         if room_id and (not detected_objects or not room_dimensions):
-            result = await db.execute(select(Room).where(Room.id == uuid.UUID(room_id)))
+            result = await db.execute(
+                select(Room).where(
+                    Room.id == uuid.UUID(room_id),
+                    Room.user_id == uuid.UUID(user_id),
+                )
+            )
             room = result.scalar_one_or_none()
-            if room:
-                if not detected_objects and room.detected_objects:
-                    detected_objects = room.detected_objects if isinstance(room.detected_objects, list) else []
-                if not room_dimensions and room.area:
-                    side = room.area ** 0.5
-                    room_dimensions = {"width": round(side * 1.2, 1), "depth": round(side / 1.2, 1), "height": 2.8}
+            if not room:
+                raise ValueError("Room not found")
+            if not detected_objects and room.detected_objects:
+                detected_objects = room.detected_objects if isinstance(room.detected_objects, list) else []
+            if not room_dimensions and isinstance(room.dimensions, dict):
+                room_dimensions = room.dimensions
+            if (
+                not room_dimensions
+                and reconstruction_method == "depth_estimation"
+                and room.image_url
+            ):
+                try:
+                    depth_result = await asyncio.to_thread(
+                        depth_estimator.estimate_depth, room.image_url
+                    )
+                    room_dimensions = depth_result.get("estimated_dimensions")
+                    logger.info(
+                        "Estimated room dimensions from image using %s",
+                        depth_result.get("method", "unknown"),
+                    )
+                except Exception as exc:
+                    logger.warning("Depth estimation failed: %s", exc)
+            if not room_dimensions and room.area:
+                side = room.area ** 0.5
+                room_dimensions = {"width": round(side * 1.2, 1), "depth": round(side / 1.2, 1), "height": 2.8}
 
         if not room_dimensions:
             room_dimensions = {"width": 5.0, "depth": 4.0, "height": 2.8}

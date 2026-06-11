@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db
 from backend.app.models.room import Room
-from backend.app.schemas.response_models import RoomResponse, RoomAnalysis
+from backend.app.schemas.response_models import RoomResponse
 from backend.app.services.ai_service import ai_service
 from backend.app.services.storage_service import storage_service
 from backend.app.core.security import get_current_user_id

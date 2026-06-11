@@ -430,7 +430,7 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            if (room.roomId != null) context.go('/ar/${room.roomId}');
+                            context.go('/ar/house/${room.id}');
                           },
                           icon: const Icon(Icons.view_in_ar),
                           label: const Text('View in AR'),

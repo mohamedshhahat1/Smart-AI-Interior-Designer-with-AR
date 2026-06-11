@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, patch
 
 os.environ["ENVIRONMENT"] = "testing"
 
-from app.main import app
-from app.db.database import Base, get_db
-from app.core.security import create_access_token, create_refresh_token, hash_password
-from app.models.user import User
+from backend.app.main import app
+from backend.app.db.database import Base, get_db
+from backend.app.core.security import create_access_token, create_refresh_token, hash_password
+from backend.app.models.user import User
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 

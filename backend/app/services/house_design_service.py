@@ -1,11 +1,9 @@
-import uuid
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from backend.app.models.house_project import HouseProject, HouseRoomDesign
+from backend.app.models.house_project import HouseProject
 from backend.app.models.room import Room
 from backend.app.services.ai_service import ai_service
 from backend.app.services.cost_service import cost_service

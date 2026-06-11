@@ -1,7 +1,7 @@
 import io
 import pytest
 from unittest.mock import AsyncMock, patch
-from tests.conftest import auth_header
+from backend.tests.conftest import auth_header
 
 
 class TestRoomUpload:
@@ -33,9 +33,16 @@ class TestRoomUpload:
             "detected_objects": [],
             "segmentation_data": {},
         }
-        with patch(
-            "backend.app.api.routes.room.ai_service.analyze_room",
-            new=AsyncMock(return_value=mock_analysis),
+        with (
+            patch(
+                "backend.app.api.routes.room.ai_service.analyze_room",
+                new=AsyncMock(return_value=mock_analysis),
+            ),
+            patch("backend.app.api.routes.room.storage_service.upload_bytes"),
+            patch(
+                "backend.app.api.routes.room.storage_service.get_internal_url",
+                return_value="http://storage.test/rooms/test.jpg",
+            ),
         ):
             fake_image = io.BytesIO(b"\xff\xd8\xff\xe0" + b"\x00" * 1024)
             resp = await async_client.post(

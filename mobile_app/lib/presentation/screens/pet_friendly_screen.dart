@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
 import 'package:smart_interior_ai/data/models/pet_friendly_model.dart';
+import 'package:smart_interior_ai/data/models/room_model.dart';
+import 'package:smart_interior_ai/data/services/api_service.dart';
+import 'package:smart_interior_ai/presentation/widgets/scanned_room_picker.dart';
 
 class PetFriendlyScreen extends StatefulWidget {
   const PetFriendlyScreen({super.key});
@@ -12,6 +15,10 @@ class PetFriendlyScreen extends StatefulWidget {
 
 class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _apiService = ApiService();
+  List<RoomModel> _rooms = [];
+  RoomModel? _selectedRoom;
+  bool _isLoadingRooms = true;
 
   String _petName = '';
   String _species = 'dog';
@@ -35,6 +42,7 @@ class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadRooms();
   }
 
   @override
@@ -48,6 +56,12 @@ class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTicker
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter your pet\'s name')));
       return;
     }
+    if (_selectedRoom == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a scanned room first')),
+      );
+      return;
+    }
     setState(() => _isAnalyzing = true);
     try {
       final profileRes = await ApiClient().dio.post('/pet-friendly/profiles', data: {
@@ -58,7 +72,11 @@ class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTicker
       _createdProfileId = profileRes.data['id'];
 
       final analysisRes = await ApiClient().dio.post('/pet-friendly/analyze', data: {
-        'pet_profile_ids': [_createdProfileId], 'room_type': 'living_room', 'include_products': true,
+        'pet_profile_ids': [_createdProfileId],
+        'room_id': _selectedRoom!.id,
+        'room_type': _selectedRoom!.roomType ?? 'living_room',
+        'detected_objects': _selectedRoom!.detectedObjects,
+        'include_products': true,
       });
       setState(() {
         _analysis = PetFriendlyAnalysisModel.fromJson(analysisRes.data);
@@ -68,6 +86,19 @@ class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTicker
     } catch (e) {
       setState(() => _isAnalyzing = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Analysis failed')));
+    }
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final rooms = await _apiService.listRooms();
+      if (!mounted) return;
+      setState(() {
+        _rooms = rooms;
+        _isLoadingRooms = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingRooms = false);
     }
   }
 
@@ -93,6 +124,15 @@ class _PetFriendlyScreenState extends State<PetFriendlyScreen> with SingleTicker
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Room Context', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        ScannedRoomPicker(
+          rooms: _rooms,
+          selectedRoomId: _selectedRoom?.id,
+          isLoading: _isLoadingRooms,
+          onChanged: (room) => setState(() => _selectedRoom = room),
+        ),
+        const SizedBox(height: 24),
         const Text('Your Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         TextField(

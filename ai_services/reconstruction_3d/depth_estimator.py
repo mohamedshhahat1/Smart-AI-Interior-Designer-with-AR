@@ -1,6 +1,7 @@
+import os
 import numpy as np
-from typing import Optional
-from PIL import Image
+
+from ai_services.utils.image_processing import load_image
 
 
 class DepthEstimator:
@@ -12,6 +13,9 @@ class DepthEstimator:
 
     def load_model(self, model_type: str = "DPT_Large"):
         if self.model is not None:
+            return
+        if os.getenv("ENABLE_MIDAS", "false").lower() not in ("1", "true", "yes"):
+            self.model = "heuristic"
             return
         try:
             import torch
@@ -28,7 +32,7 @@ class DepthEstimator:
     def estimate_depth(self, image_path: str) -> dict:
         self.load_model()
 
-        image = np.array(Image.open(image_path).convert("RGB"))
+        image = np.array(load_image(image_path))
         height, width = image.shape[:2]
 
         if self.model == "heuristic":

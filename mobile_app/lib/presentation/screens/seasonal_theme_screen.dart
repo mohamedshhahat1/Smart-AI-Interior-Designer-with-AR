@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
+import 'package:smart_interior_ai/data/models/room_model.dart';
 import 'package:smart_interior_ai/data/models/seasonal_model.dart';
+import 'package:smart_interior_ai/data/services/api_service.dart';
+import 'package:smart_interior_ai/presentation/widgets/scanned_room_picker.dart';
 
 class SeasonalThemeScreen extends StatefulWidget {
   const SeasonalThemeScreen({super.key});
@@ -12,6 +15,10 @@ class SeasonalThemeScreen extends StatefulWidget {
 
 class _SeasonalThemeScreenState extends State<SeasonalThemeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _apiService = ApiService();
+  List<RoomModel> _rooms = [];
+  RoomModel? _selectedRoom;
+  bool _isLoadingRooms = true;
   String _selectedType = 'season';
   String? _selectedSeason;
   String? _selectedHoliday;
@@ -46,6 +53,7 @@ class _SeasonalThemeScreenState extends State<SeasonalThemeScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadRooms();
   }
 
   @override
@@ -55,13 +63,20 @@ class _SeasonalThemeScreenState extends State<SeasonalThemeScreen> with SingleTi
   }
 
   Future<void> _generate() async {
+    if (_selectedRoom == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a scanned room first')),
+      );
+      return;
+    }
     setState(() => _isGenerating = true);
     try {
       final response = await ApiClient().dio.post('/seasonal/generate', data: {
         'theme_type': _selectedType,
         'season': _selectedType == 'season' ? _selectedSeason : null,
         'holiday': _selectedType == 'holiday' ? _selectedHoliday : null,
-        'room_type': 'living_room',
+        'room_id': _selectedRoom!.id,
+        'room_type': _selectedRoom!.roomType ?? 'living_room',
         'budget_tier': _budgetTier,
         'intensity': _intensity,
         'include_diy': _includeDiy,
@@ -75,6 +90,19 @@ class _SeasonalThemeScreenState extends State<SeasonalThemeScreen> with SingleTi
     } catch (e) {
       setState(() => _isGenerating = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to generate theme')));
+    }
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final rooms = await _apiService.listRooms();
+      if (!mounted) return;
+      setState(() {
+        _rooms = rooms;
+        _isLoadingRooms = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingRooms = false);
     }
   }
 
@@ -242,7 +270,16 @@ class _SeasonalThemeScreenState extends State<SeasonalThemeScreen> with SingleTi
               gradient: LinearGradient(colors: _themeGradient(t.season, t.holiday)),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Room Context', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        ScannedRoomPicker(
+          rooms: _rooms,
+          selectedRoomId: _selectedRoom?.id,
+          isLoading: _isLoadingRooms,
+          onChanged: (room) => setState(() => _selectedRoom = room),
+        ),
+        const SizedBox(height: 24),
               Text(t.name, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
               if (t.description != null) ...[const SizedBox(height: 8), Text(t.description!, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13))],
               const SizedBox(height: 16),

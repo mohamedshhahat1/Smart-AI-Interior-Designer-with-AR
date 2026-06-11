@@ -64,7 +64,8 @@ class CostCalculateRequest(BaseModel):
 
 
 class ARSceneRequest(BaseModel):
-    design_id: str
+    design_id: Optional[str] = None
+    house_room_design_id: Optional[str] = None
     room_dimensions: Optional[dict] = None
 
 

@@ -47,6 +47,7 @@ jobs:
         working-directory: backend
         env:
           ENVIRONMENT: testing
+          PYTHONPATH: ${{ github.workspace }}
           SECRET_KEY: test-secret-key-for-ci-only-not-production
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           REDIS_URL: redis://localhost:6379/0
@@ -74,6 +75,27 @@ jobs:
       - name: Audit dependencies
         working-directory: backend
         run: pip-audit -r requirements.txt || true
+
+  mobile:
+    name: Flutter Analyze, Test & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Test
+        run: flutter test
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=API_BASE_URL=https://example.invalid/api/v1
 
   build:
     name: Docker Build

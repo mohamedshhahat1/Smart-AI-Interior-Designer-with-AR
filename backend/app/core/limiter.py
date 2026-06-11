@@ -10,7 +10,7 @@ settings = get_settings()
 
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri=settings.redis_url,
+    storage_uri="memory://" if settings.environment == "testing" else settings.redis_url,
     default_limits=["200/minute"],
 )
 

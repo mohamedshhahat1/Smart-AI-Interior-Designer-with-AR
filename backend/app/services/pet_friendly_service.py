@@ -42,7 +42,7 @@ class PetFriendlyService:
     ) -> list[PetProfile]:
         result = await db.execute(
             select(PetProfile)
-            .where(PetProfile.user_id == uuid.UUID(user_id), PetProfile.is_active == True)
+            .where(PetProfile.user_id == uuid.UUID(user_id), PetProfile.is_active)
             .order_by(PetProfile.created_at.desc())
         )
         return list(result.scalars().all())
@@ -81,14 +81,22 @@ class PetFriendlyService:
                 })
 
         if not pets:
-            pets = [{"name": "Pet", "species": "dog", "size": "medium", "energy_level": "medium",
-                     "is_destructive": False, "sheds_fur": True, "climbs_furniture": False}]
+            raise ValueError("No accessible pet profiles were provided")
 
-        if room_id and not detected_objects:
-            result = await db.execute(select(Room).where(Room.id == uuid.UUID(room_id)))
+        if room_id:
+            result = await db.execute(
+                select(Room).where(
+                    Room.id == uuid.UUID(room_id),
+                    Room.user_id == uuid.UUID(user_id),
+                )
+            )
             room = result.scalar_one_or_none()
-            if room and room.detected_objects:
+            if not room:
+                raise ValueError("Room not found")
+            if not detected_objects and room.detected_objects:
                 detected_objects = room.detected_objects if isinstance(room.detected_objects, list) else []
+            if room.room_type:
+                room_type = room.room_type
 
         safety_result = safety_analyzer.analyze(pets, room_type, detected_objects)
         zone_result = zone_planner.plan_zones(pets, room_type)

@@ -29,19 +29,25 @@ async def generate_3d_model(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    model = await walkthrough_3d_service.generate_3d_model(
-        db=db, user_id=user_id,
-        room_type=request.room_type, name=request.name,
-        room_id=request.room_id, design_id=request.design_id,
-        quality_level=request.quality_level,
-        reconstruction_method=request.reconstruction_method,
-        room_dimensions=request.room_dimensions,
-        detected_objects=request.detected_objects,
-        include_furniture=request.include_furniture,
-        include_lighting=request.include_lighting,
-        generate_walkthrough_path=request.generate_walkthrough_path,
-        output_formats=request.output_formats,
-    )
+    try:
+        model = await walkthrough_3d_service.generate_3d_model(
+            db=db, user_id=user_id,
+            room_type=request.room_type, name=request.name,
+            room_id=request.room_id, design_id=request.design_id,
+            quality_level=request.quality_level,
+            reconstruction_method=request.reconstruction_method,
+            room_dimensions=request.room_dimensions,
+            detected_objects=request.detected_objects,
+            include_furniture=request.include_furniture,
+            include_lighting=request.include_lighting,
+            generate_walkthrough_path=request.generate_walkthrough_path,
+            output_formats=request.output_formats,
+        )
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     return _model_to_response(model)
 
 
@@ -139,7 +145,7 @@ def _model_to_response(model) -> Room3DModelResponse:
 
     lighting = None
     if model.lighting_setup:
-        lighting = [LightSource3D(**l) for l in model.lighting_setup]
+        lighting = [LightSource3D(**light) for light in model.lighting_setup]
 
     cameras = None
     if model.camera_positions:

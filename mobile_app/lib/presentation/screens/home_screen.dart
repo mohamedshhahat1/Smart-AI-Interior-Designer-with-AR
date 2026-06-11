@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppTheme.successColor,
                     onTap: () {
                       if (_recentDesigns.isNotEmpty) {
-                        context.go('/design/${_recentDesigns.first['id']}');
+                        context.go('/furniture/${_recentDesigns.first['id']}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Scan a room first to get furniture recommendations')),
@@ -217,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _build3DWalkthroughCard(context),
               const SizedBox(height: 24),
               Text(
-                'Recent Designs',
+                'Recent Rooms',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -540,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Transform your room for every season and celebration',
+                    'Plan seasonal decor for a scanned room',
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.9), fontSize: 13),
                   ),

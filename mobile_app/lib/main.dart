@@ -16,6 +16,7 @@ import 'package:smart_interior_ai/presentation/screens/house_detail_screen.dart'
 import 'package:smart_interior_ai/presentation/screens/house_cost_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/smart_lighting_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/feng_shui_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/furniture_recommendation_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/seasonal_theme_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/pet_friendly_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/walkthrough_3d_screen.dart';
@@ -58,9 +59,22 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/ar/house/:roomDesignId',
+      builder: (context, state) => ARViewScreen(
+        designId: state.pathParameters['roomDesignId']!,
+        isHouseRoomDesign: true,
+      ),
+    ),
+    GoRoute(
       path: '/cost/:designId',
       builder: (context, state) => CostEstimationScreen(
         designId: state.pathParameters['designId']!,
+      ),
+    ),
+    GoRoute(
+      path: '/furniture/:roomId',
+      builder: (context, state) => FurnitureRecommendationScreen(
+        roomId: state.pathParameters['roomId']!,
       ),
     ),
     GoRoute(

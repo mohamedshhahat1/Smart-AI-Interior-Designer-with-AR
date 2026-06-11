@@ -1,5 +1,5 @@
 import pytest
-from tests.conftest import auth_header
+from backend.tests.conftest import auth_header
 
 
 class TestRegister:

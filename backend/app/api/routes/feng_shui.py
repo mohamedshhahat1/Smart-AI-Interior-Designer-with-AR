@@ -1,4 +1,3 @@
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,19 +29,25 @@ async def analyze_feng_shui(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    analysis = await feng_shui_service.analyze_room(
-        db=db,
-        user_id=user_id,
-        room_type=request.room_type,
-        room_id=request.room_id,
-        design_id=request.design_id,
-        compass_direction=request.compass_direction,
-        detected_objects=request.detected_objects,
-        room_dimensions=request.room_dimensions,
-        birth_year=request.birth_year,
-        include_bagua=request.include_bagua,
-        include_element_analysis=request.include_element_analysis,
-    )
+    try:
+        analysis = await feng_shui_service.analyze_room(
+            db=db,
+            user_id=user_id,
+            room_type=request.room_type,
+            room_id=request.room_id,
+            design_id=request.design_id,
+            compass_direction=request.compass_direction,
+            detected_objects=request.detected_objects,
+            room_dimensions=request.room_dimensions,
+            birth_year=request.birth_year,
+            include_bagua=request.include_bagua,
+            include_element_analysis=request.include_element_analysis,
+        )
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
     return _analysis_to_response(analysis)
 

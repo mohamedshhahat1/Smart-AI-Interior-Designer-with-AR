@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
 import 'package:smart_interior_ai/data/models/feng_shui_model.dart';
+import 'package:smart_interior_ai/data/models/room_model.dart';
+import 'package:smart_interior_ai/data/services/api_service.dart';
+import 'package:smart_interior_ai/presentation/widgets/scanned_room_picker.dart';
 
 class FengShuiScreen extends StatefulWidget {
   const FengShuiScreen({super.key});
@@ -12,7 +15,11 @@ class FengShuiScreen extends StatefulWidget {
 
 class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedRoom = 'living_room';
+  final _apiService = ApiService();
+  List<RoomModel> _rooms = [];
+  RoomModel? _selectedScannedRoom;
+  bool _isLoadingRooms = true;
+  String _selectedRoomType = 'living_room';
   String? _selectedDirection;
   String? _birthYear;
   bool _isAnalyzing = false;
@@ -27,6 +34,7 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadRooms();
   }
 
   @override
@@ -36,10 +44,19 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
   }
 
   Future<void> _runAnalysis() async {
+    if (_selectedScannedRoom == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a scanned room first')),
+      );
+      return;
+    }
     setState(() => _isAnalyzing = true);
     try {
       final response = await ApiClient().dio.post('/feng-shui/analyze', data: {
-        'room_type': _selectedRoom,
+        'room_id': _selectedScannedRoom!.id,
+        'room_type': _selectedRoomType,
+        'detected_objects': _selectedScannedRoom!.detectedObjects,
+        'room_dimensions': _selectedScannedRoom!.dimensions,
         'compass_direction': _selectedDirection,
         'birth_year': _birthYear != null ? int.tryParse(_birthYear!) : null,
         'include_bagua': true,
@@ -53,6 +70,19 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
     } catch (e) {
       setState(() => _isAnalyzing = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Analysis failed')));
+    }
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final rooms = await _apiService.listRooms();
+      if (!mounted) return;
+      setState(() {
+        _rooms = rooms;
+        _isLoadingRooms = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingRooms = false);
     }
   }
 
@@ -85,11 +115,25 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text('Room Context', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          ScannedRoomPicker(
+            rooms: _rooms,
+            selectedRoomId: _selectedScannedRoom?.id,
+            isLoading: _isLoadingRooms,
+            onChanged: (room) {
+              setState(() {
+                _selectedScannedRoom = room;
+                _selectedRoomType = room?.roomType ?? _selectedRoomType;
+              });
+            },
+          ),
+          const SizedBox(height: 24),
           const Text('Room Type', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: _roomTypes.entries.map((e) =>
-            ChoiceChip(label: Text(e.value), selected: _selectedRoom == e.key,
-              onSelected: (_) => setState(() => _selectedRoom = e.key),
+            ChoiceChip(label: Text(e.value), selected: _selectedRoomType == e.key,
+              onSelected: (_) => setState(() => _selectedRoomType = e.key),
               selectedColor: AppTheme.primaryColor.withOpacity(0.2)),
           ).toList()),
           const SizedBox(height: 24),

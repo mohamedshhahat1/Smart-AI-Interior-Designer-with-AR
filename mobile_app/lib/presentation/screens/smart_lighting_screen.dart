@@ -166,7 +166,7 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
     final platform = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Export to Smart Home'),
+        title: const Text('Generate Smart Home Setup Guide'),
         children: [
           for (final p in ['philips_hue', 'lifx', 'homekit', 'google_home', 'alexa'])
             SimpleDialogOption(
@@ -197,7 +197,7 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Exported to ${_platformLabel(platform)}'),
+            title: Text('${_platformLabel(platform)} setup guide'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +220,7 @@ class _SmartLightingScreenState extends State<SmartLightingScreen> with SingleTi
       if (mounted) {
         setState(() => _isExporting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to export scene')),
+          const SnackBar(content: Text('Failed to generate setup guide')),
         );
       }
     }

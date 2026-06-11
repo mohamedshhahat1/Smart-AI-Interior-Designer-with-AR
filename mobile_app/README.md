@@ -1,17 +1,35 @@
-# smart_interior_ai
+# Smart Interior AI Mobile
 
-A new Flutter project.
+Flutter client for Smart AI Interior Designer with AR.
 
-## Getting Started
+## API configuration
 
-This project is a starting point for a Flutter application.
+Development defaults are:
 
-A few resources to get you started if this is your first Flutter project:
+- Android emulator: `http://10.0.2.2:8000/api/v1`
+- Web, iOS simulator, Windows, macOS, Linux: `http://localhost:8000/api/v1`
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Physical devices and release builds must provide a reachable HTTPS endpoint:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter run --dart-define=API_BASE_URL=https://api.example.com/api/v1
+```
+
+Debug Android builds allow cleartext HTTP for local development. The main
+manifest does not enable cleartext traffic, so production deployments should
+use HTTPS.
+
+## Android release signing
+
+Release tasks require `android/key.properties` with `storeFile`,
+`storePassword`, `keyAlias`, and `keyPassword`. Release builds fail rather than
+silently using the debug key when this file is missing.
+
+## Verification
+
+```powershell
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --debug --dart-define=API_BASE_URL=https://example.invalid/api/v1
+```

@@ -1,5 +1,5 @@
 import os
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic_settings import BaseSettings
 from pydantic import field_validator

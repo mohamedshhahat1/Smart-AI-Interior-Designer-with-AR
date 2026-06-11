@@ -1,4 +1,4 @@
-package com.example.smart_interior_ai
+package com.smartinterior.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

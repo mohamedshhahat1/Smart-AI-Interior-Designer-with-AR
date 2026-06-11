@@ -5,13 +5,14 @@ from backend.app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+engine_options = {
+    "echo": settings.debug,
+    "pool_pre_ping": True,
+}
+if not settings.database_url.startswith("sqlite"):
+    engine_options.update(pool_size=20, max_overflow=10)
+
+engine = create_async_engine(settings.database_url, **engine_options)
 
 async_session = async_sessionmaker(
     engine,
