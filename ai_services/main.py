@@ -1,8 +1,8 @@
+import logging
 import os
-import tempfile
 import uuid
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 
@@ -10,12 +10,13 @@ from ai_services.vision.room_analysis import room_analyzer
 from ai_services.generation.prompt_builder import prompt_builder
 from ai_services.generation.stable_diffusion import sdxl_generator
 from ai_services.generation.controlnet_pipeline import controlnet_pipeline
-from ai_services.recommendation.furniture_matcher import furniture_matcher
 from ai_services.recommendation.catalog_search import catalog_search
-from ai_services.cost.cost_calculator import cost_calculator
-from ai_services.cost.budget_optimizer import budget_optimizer
 from ai_services.agents.interior_ai_agent import interior_agent
-from ai_services.utils.image_processing import load_image, image_to_bytes
+from ai_services.utils.image_processing import load_image
+
+logger = logging.getLogger(__name__)
+
+DESIGN_OUTPUT_DIR = os.getenv("DESIGN_OUTPUT_DIR", "/tmp/designs")
 
 app = FastAPI(
     title="Smart Interior AI - AI Services",
@@ -53,6 +54,38 @@ class ChatRequest(BaseModel):
     conversation_history: list[dict] = []
 
 
+def _render_design(prompt_data: dict, image_url: Optional[str], preserve_layout: bool) -> Optional[str]:
+    """Render a design image and return its saved path, or None on failure."""
+    try:
+        original = None
+        if preserve_layout and image_url:
+            try:
+                # load_image transparently handles both local paths and http(s) URLs.
+                original = load_image(image_url)
+            except Exception as exc:
+                logger.warning("Could not load source image for layout preservation: %s", exc)
+                original = None
+
+        if original is not None:
+            generated_image = controlnet_pipeline.redesign_room(
+                original_image=original,
+                prompt_data=prompt_data,
+            )
+        else:
+            generated_image = sdxl_generator.generate(
+                positive_prompt=prompt_data["positive"],
+                negative_prompt=prompt_data["negative"],
+            )
+
+        os.makedirs(DESIGN_OUTPUT_DIR, exist_ok=True)
+        output_filename = os.path.join(DESIGN_OUTPUT_DIR, f"{uuid.uuid4()}.jpg")
+        generated_image.save(output_filename, quality=95)
+        return output_filename
+    except Exception:
+        logger.exception("Image generation failed")
+        return None
+
+
 @app.post("/vision/analyze")
 async def analyze_room(request: AnalyzeRequest):
     result = room_analyzer.analyze(request.image_url)
@@ -78,40 +111,35 @@ async def generate_design(request: DesignRequest):
         budget=request.budget,
     )
 
-    generated_image_url = None
-    try:
-        image_url = request.room_analysis.get("image_url")
-        if request.preserve_layout and image_url and os.path.exists(image_url):
-            original = load_image(image_url)
-            generated_image = controlnet_pipeline.redesign_room(
-                original_image=original,
-                prompt_data=prompt_data,
-            )
-        else:
-            generated_image = sdxl_generator.generate(
-                positive_prompt=prompt_data["positive"],
-                negative_prompt=prompt_data["negative"],
-            )
-
-        output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
-        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-        generated_image.save(output_filename, quality=95)
-        generated_image_url = output_filename
-    except Exception:
-        pass
-
-    design_brief = await interior_agent.generate_design_brief(
-        room_data=request.room_analysis,
-        style=request.style,
-        budget=request.budget,
+    generated_image_url = _render_design(
+        prompt_data=prompt_data,
+        image_url=request.room_analysis.get("image_url"),
+        preserve_layout=request.preserve_layout,
     )
+
+    try:
+        furniture_list = catalog_search.search(style=request.style, max_price=request.budget)
+    except Exception:
+        logger.exception("Furniture catalog lookup failed")
+        furniture_list = []
+
+    try:
+        design_brief = await interior_agent.generate_design_brief(
+            room_data=request.room_analysis,
+            style=request.style,
+            budget=request.budget,
+        )
+        brief_text = design_brief.get("brief", "")
+    except Exception:
+        logger.exception("Design brief generation failed")
+        brief_text = ""
 
     return {
         "image_url": generated_image_url,
         "color_palette": prompt_data.get("style"),
-        "furniture_list": [],
+        "furniture_list": furniture_list,
         "ar_scene_data": {},
-        "design_brief": design_brief.get("brief", ""),
+        "design_brief": brief_text,
     }
 
 
@@ -123,27 +151,12 @@ async def enhance_design(request: EnhanceRequest):
         instruction=request.instruction,
     )
 
-    enhanced_image_url = request.design_data.get("image_url")
-    try:
-        image_url = request.design_data.get("image_url")
-        if image_url and os.path.exists(image_url):
-            original = load_image(image_url)
-            generated_image = controlnet_pipeline.redesign_room(
-                original_image=original,
-                prompt_data=prompt_data,
-            )
-        else:
-            generated_image = sdxl_generator.generate(
-                positive_prompt=prompt_data["positive"],
-                negative_prompt=prompt_data["negative"],
-            )
-
-        output_filename = f"/tmp/designs/{uuid.uuid4()}.jpg"
-        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-        generated_image.save(output_filename, quality=95)
-        enhanced_image_url = output_filename
-    except Exception:
-        pass
+    rendered = _render_design(
+        prompt_data=prompt_data,
+        image_url=request.design_data.get("image_url"),
+        preserve_layout=True,
+    )
+    enhanced_image_url = rendered or request.design_data.get("image_url")
 
     return {
         "image_url": enhanced_image_url,

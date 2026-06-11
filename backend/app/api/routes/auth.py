@@ -99,10 +99,22 @@ async def refresh_token(request: Request, db: AsyncSession = Depends(get_db)):
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
+    try:
+        user_uuid = _uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    result = await db.execute(select(User).where(User.id == user_uuid))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is no longer active")
+
     new_access = create_access_token(data={"sub": user_id})
+    new_refresh = create_refresh_token(data={"sub": user_id})
 
     return {
         "access_token": new_access,
+        "refresh_token": new_refresh,
         "token_type": "bearer",
         "expires_in": settings.access_token_expire_minutes * 60,
     }

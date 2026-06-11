@@ -71,7 +71,8 @@ class StorageService:
         return self.client.presigned_get_object(BUCKET_NAME, object_name, expires=expires)
 
     def get_internal_url(self, object_name: str) -> str:
-        return f"http://{settings.minio_endpoint}/{BUCKET_NAME}/{object_name}"
+        scheme = "https" if settings.minio_secure else "http"
+        return f"{scheme}://{settings.minio_endpoint}/{BUCKET_NAME}/{object_name}"
 
 
 storage_service = StorageService()

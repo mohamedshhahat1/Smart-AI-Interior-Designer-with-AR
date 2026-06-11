@@ -54,7 +54,7 @@ async def upload_room(
     except httpx.HTTPStatusError:
         logger.error("AI service returned error for room analysis")
         raise HTTPException(status_code=502, detail="AI service unavailable")
-    except (httpx.RequestError, Exception) as e:
+    except httpx.RequestError as e:
         logger.error("AI service connection error: %s", e)
         raise HTTPException(status_code=503, detail="AI service not reachable")
 

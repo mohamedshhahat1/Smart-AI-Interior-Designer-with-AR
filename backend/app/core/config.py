@@ -33,7 +33,15 @@ class BaseAppSettings(BaseSettings):
     openai_api_key: str = ""
     google_api_key: str = ""
 
-    cors_allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:5000", "http://localhost:5001", "http://localhost:8081", "http://127.0.0.1:5000", "http://127.0.0.1:8080", "*"]
+    cors_allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://localhost:5000",
+        "http://localhost:5001",
+        "http://localhost:8081",
+        "http://127.0.0.1:5000",
+        "http://127.0.0.1:8080",
+    ]
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 

@@ -20,5 +20,3 @@ pydantic==2.7.4
 python-dotenv==1.0.1
 scikit-learn==1.5.1
 trimesh>=4.0.0
-uvicorn
-fastapi

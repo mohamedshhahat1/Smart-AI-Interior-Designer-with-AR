@@ -60,7 +60,7 @@ async def generate_design(
     except httpx.HTTPStatusError:
         logger.error("AI service returned error for design generation")
         raise HTTPException(status_code=502, detail="AI service unavailable")
-    except (httpx.RequestError, Exception) as e:
+    except httpx.RequestError as e:
         logger.error("AI service connection error: %s", e)
         raise HTTPException(status_code=503, detail="AI service not reachable")
 
@@ -88,12 +88,19 @@ async def generate_design(
 
 
 @router.post("/enhance", response_model=DesignResponse)
+@limiter.limit("20/minute")
 async def enhance_design(
-    request: DesignEnhanceRequest,
+    request: Request,
+    body: DesignEnhanceRequest,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    result = await db.execute(select(Design).where(Design.id == uuid.UUID(request.design_id)))
+    try:
+        did = uuid.UUID(body.design_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    result = await db.execute(select(Design).where(Design.id == did))
     design = result.scalar_one_or_none()
     if not design:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design not found")
@@ -111,7 +118,14 @@ async def enhance_design(
         "color_palette": design.color_palette,
     }
 
-    enhanced = await ai_service.enhance_design(design_data, request.instruction)
+    try:
+        enhanced = await ai_service.enhance_design(design_data, body.instruction)
+    except httpx.HTTPStatusError:
+        logger.error("AI service returned error for design enhancement")
+        raise HTTPException(status_code=502, detail="AI service unavailable")
+    except httpx.RequestError as e:
+        logger.error("AI service connection error: %s", e)
+        raise HTTPException(status_code=503, detail="AI service not reachable")
 
     design.generated_image_url = enhanced.get("image_url", design.generated_image_url)
     design.furniture_list = enhanced.get("furniture_list", design.furniture_list)
@@ -146,7 +160,12 @@ async def get_design(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    result = await db.execute(select(Design).where(Design.id == uuid.UUID(design_id)))
+    try:
+        did = uuid.UUID(design_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    result = await db.execute(select(Design).where(Design.id == did))
     design = result.scalar_one_or_none()
     if not design:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design not found")
