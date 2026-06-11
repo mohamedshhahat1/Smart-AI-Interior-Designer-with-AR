@@ -20,8 +20,9 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
 
   String _selectedStyle = 'scandinavian';
   String _lightingPreference = 'Warm ambient lighting';
-  final List<Map<String, String>> _rooms = [];
+  final List<Map<String, dynamic>> _rooms = [];
   final List<String> _selectedColors = [];
+  final List<Map<String, dynamic>> _scannedRooms = [];
   bool _isCreating = false;
 
   final List<String> _availableColors = [
@@ -52,11 +53,31 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadScannedRooms();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     _budgetController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadScannedRooms() async {
+    try {
+      final response = await _apiClient.dio.get('/room/');
+      final rooms = (response.data as List).cast<Map<String, dynamic>>();
+      if (mounted) {
+        setState(() {
+          _scannedRooms
+            ..clear()
+            ..addAll(rooms);
+        });
+      }
+    } catch (_) {}
   }
 
   void _addRoom() {
@@ -65,53 +86,103 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
       builder: (ctx) {
         String roomLabel = '';
         String roomType = 'living_room';
-        return AlertDialog(
-          title: const Text('Add Room'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                    labelText: 'Room Name', hintText: 'e.g. Master Bedroom'),
-                onChanged: (v) => roomLabel = v,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: roomType,
-                decoration: const InputDecoration(labelText: 'Room Type'),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'living_room', child: Text('Living Room')),
-                  DropdownMenuItem(value: 'bedroom', child: Text('Bedroom')),
-                  DropdownMenuItem(value: 'kitchen', child: Text('Kitchen')),
-                  DropdownMenuItem(value: 'bathroom', child: Text('Bathroom')),
-                  DropdownMenuItem(
-                      value: 'dining_room', child: Text('Dining Room')),
-                  DropdownMenuItem(value: 'office', child: Text('Office')),
-                  DropdownMenuItem(value: 'hallway', child: Text('Hallway')),
-                  DropdownMenuItem(value: 'studio', child: Text('Studio')),
+        String? scannedRoomId;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add Room'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(
+                        labelText: 'Room Name',
+                        hintText: 'e.g. Master Bedroom'),
+                    onChanged: (v) => roomLabel = v,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: roomType,
+                    decoration: const InputDecoration(labelText: 'Room Type'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'living_room', child: Text('Living Room')),
+                      DropdownMenuItem(
+                          value: 'bedroom', child: Text('Bedroom')),
+                      DropdownMenuItem(
+                          value: 'kitchen', child: Text('Kitchen')),
+                      DropdownMenuItem(
+                          value: 'bathroom', child: Text('Bathroom')),
+                      DropdownMenuItem(
+                          value: 'dining_room', child: Text('Dining Room')),
+                      DropdownMenuItem(value: 'office', child: Text('Office')),
+                      DropdownMenuItem(
+                          value: 'hallway', child: Text('Hallway')),
+                      DropdownMenuItem(value: 'studio', child: Text('Studio')),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => roomType = v ?? roomType),
+                  ),
+                  if (_scannedRooms.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      value: scannedRoomId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Link scanned room (optional)',
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                            value: null, child: Text('None')),
+                        ..._scannedRooms.map((room) {
+                          final id = room['id'].toString();
+                          final type =
+                              (room['room_type'] ?? 'room').toString();
+                          return DropdownMenuItem<String?>(
+                            value: id,
+                            child: Text(type.replaceAll('_', ' ')),
+                          );
+                        }),
+                      ],
+                      onChanged: (v) {
+                        setDialogState(() {
+                          scannedRoomId = v;
+                          if (v != null) {
+                            final match = _scannedRooms.firstWhere(
+                              (r) => r['id'].toString() == v,
+                              orElse: () => <String, dynamic>{},
+                            );
+                            final type = match['room_type'];
+                            if (type != null) roomType = type.toString();
+                          }
+                        });
+                      },
+                    ),
+                  ],
                 ],
-                onChanged: (v) => roomType = v ?? roomType,
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                if (roomLabel.isNotEmpty) {
-                  setState(() {
-                    _rooms
-                        .add({'room_label': roomLabel, 'room_type': roomType});
-                  });
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () {
+                    if (roomLabel.isNotEmpty) {
+                      setState(() {
+                        _rooms.add({
+                          'room_label': roomLabel,
+                          'room_type': roomType,
+                          if (scannedRoomId != null) 'room_id': scannedRoomId,
+                        });
+                      });
+                      Navigator.pop(ctx);
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -139,6 +210,7 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
             .map((r) => {
                   'room_label': r['room_label'],
                   'room_type': r['room_type'],
+                  if (r['room_id'] != null) 'room_id': r['room_id'],
                 })
             .toList(),
         'budget': _budgetController.text.isNotEmpty
@@ -298,6 +370,7 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
               else
                 ...List.generate(_rooms.length, (i) {
                   final room = _rooms[i];
+                  final isLinked = room['room_id'] != null;
                   return Card(
                     child: ListTile(
                       leading: CircleAvatar(
@@ -307,8 +380,9 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.bold)),
                       ),
-                      title: Text(room['room_label']!),
-                      subtitle: Text(room['room_type']!.replaceAll('_', ' ')),
+                      title: Text(room['room_label'].toString()),
+                      subtitle: Text(
+                          '${room['room_type'].toString().replaceAll('_', ' ')}${isLinked ? ' • linked to scan' : ''}'),
                       trailing: IconButton(
                         icon:
                             const Icon(Icons.delete_outline, color: Colors.red),

@@ -17,6 +17,7 @@ import 'package:ar_flutter_plugin_2/models/ar_hittest_result.dart';
 import 'package:ar_flutter_plugin_2/models/ar_node.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
 import 'package:smart_interior_ai/core/utils/api_client.dart';
@@ -391,18 +392,23 @@ class _ARViewScreenState extends State<ARViewScreen> {
   Future<void> _shareScene() async {
     try {
       final bytes = await _takeSnapshot();
-      if (bytes != null) {
-        final dir = await getApplicationDocumentsDirectory();
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final file = File('${dir.path}/ar_share_$timestamp.png');
-        await file.writeAsBytes(bytes);
-
+      if (bytes == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('AR image saved to: ${file.path}')),
+            const SnackBar(content: Text('Nothing to share yet')),
           );
         }
+        return;
       }
+      final dir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/ar_share_$timestamp.png');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        text: 'Check out my AR room design from Smart Interior AI!',
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

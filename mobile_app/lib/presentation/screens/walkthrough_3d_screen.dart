@@ -23,6 +23,11 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
   int _currentCameraIndex = 0;
   bool _isWalkthroughPlaying = false;
 
+  String? _selectedRoomId;
+  String _selectedRoomType = 'living_room';
+  List<Map<String, dynamic>> _rooms = [];
+  bool _loadingRooms = true;
+
   final _qualities = {
     'draft': 'Draft',
     'standard': 'Standard',
@@ -43,6 +48,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadRooms();
   }
 
   @override
@@ -52,12 +58,30 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
     super.dispose();
   }
 
+  Future<void> _loadRooms() async {
+    try {
+      final response = await ApiClient().dio.get('/room/');
+      final rooms = (response.data as List).cast<Map<String, dynamic>>();
+      if (mounted) {
+        setState(() {
+          _rooms = rooms;
+          _loadingRooms = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingRooms = false);
+    }
+  }
+
   Future<void> _generate() async {
     setState(() => _isGenerating = true);
     try {
       final response = await ApiClient().dio.post('/3d/generate', data: {
-        'name': 'My 3D Room',
-        'room_type': 'living_room',
+        'name': _selectedRoomType == 'living_room'
+            ? 'My 3D Room'
+            : 'My 3D ${_selectedRoomType.replaceAll('_', ' ')}',
+        'room_type': _selectedRoomType,
+        if (_selectedRoomId != null) 'room_id': _selectedRoomId,
         'quality_level': _selectedQuality,
         'reconstruction_method': _selectedMethod,
         'include_furniture': true,
@@ -68,6 +92,7 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
       setState(() {
         _model = Room3DModelData.fromJson(response.data);
         _isGenerating = false;
+        _currentCameraIndex = 0;
         _tabController.animateTo(1);
       });
     } catch (e) {
@@ -101,6 +126,50 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Source Room (optional)',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(
+            'Base the 3D model on a scanned room so its layout is used.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        const SizedBox(height: 12),
+        if (_loadingRooms)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_rooms.isEmpty)
+          Text('No scanned rooms yet — a generic room will be generated.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]))
+        else
+          DropdownButtonFormField<String>(
+            value: _selectedRoomId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Room',
+              prefixIcon: Icon(Icons.meeting_room),
+            ),
+            items: _rooms.map((room) {
+              final id = room['id'].toString();
+              final type = (room['room_type'] ?? 'room').toString();
+              return DropdownMenuItem(
+                value: id,
+                child: Text(type.replaceAll('_', ' ')),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedRoomId = value;
+                final match = _rooms.firstWhere(
+                  (r) => r['id'].toString() == value,
+                  orElse: () => <String, dynamic>{},
+                );
+                _selectedRoomType =
+                    (match['room_type'] ?? _selectedRoomType).toString();
+              });
+            },
+          ),
+        const SizedBox(height: 24),
         const Text('Reconstruction Method',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
@@ -321,6 +390,14 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
     );
   }
 
+  String _cameraOrbitForIndex(int index) {
+    final path = _model?.walkthroughPath;
+    if (path == null || path.isEmpty) return '0deg 70deg 105%';
+    final total = path.length;
+    final azimuth = (360.0 / total) * (index % total);
+    return '${azimuth.toStringAsFixed(0)}deg 70deg 105%';
+  }
+
   Widget _buildWalkthroughTab() {
     if (_model == null || _model!.walkthroughPath == null)
       return _emptyState(
@@ -364,6 +441,26 @@ class _Walkthrough3DScreenState extends State<Walkthrough3DScreen>
                   )),
             ]),
           ),
+          if (_model!.glbModelUrl != null &&
+              _model!.glbModelUrl!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                height: 260,
+                child: ModelViewer(
+                  key: ValueKey('walkthrough_cam_$_currentCameraIndex'),
+                  src: _model!.glbModelUrl!,
+                  alt: '3D Room Walkthrough',
+                  ar: false,
+                  autoRotate: false,
+                  cameraControls: true,
+                  cameraOrbit: _cameraOrbitForIndex(_currentCameraIndex),
+                  backgroundColor: const Color(0xFF1A1A2E),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           const Text('Walkthrough Path',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

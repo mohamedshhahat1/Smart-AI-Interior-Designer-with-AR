@@ -62,6 +62,57 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
     }
   }
 
+  Future<void> _refineRoom(HouseRoomDesignModel room) async {
+    final controller = TextEditingController();
+    final instruction = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Refine ${room.roomLabel}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'e.g. Add warmer lighting and a larger rug',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Refine'),
+          ),
+        ],
+      ),
+    );
+
+    if (instruction == null || instruction.isEmpty) return;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Refining room design...')),
+    );
+    try {
+      await ApiClient().dio.post('/house/room/refine', data: {
+        'room_design_id': room.id,
+        'instruction': instruction,
+      });
+      await _loadProject();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Room design refined')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to refine room')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -379,7 +430,7 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            if (room.roomId != null) context.go('/ar/${room.id}');
+                            if (room.roomId != null) context.go('/ar/${room.roomId}');
                           },
                           icon: const Icon(Icons.view_in_ar),
                           label: const Text('View in AR'),
@@ -388,7 +439,10 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(ctx),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _refineRoom(room);
+                          },
                           icon: const Icon(Icons.edit),
                           label: const Text('Refine'),
                           style: ElevatedButton.styleFrom(
