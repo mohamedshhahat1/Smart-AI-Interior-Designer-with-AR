@@ -1,0 +1,7 @@
+# Never commit TLS material. Keep the directory (and docs/script) tracked.
+cert.pem
+key.pem
+*.pem
+*.key
+*.crt
+!README.md

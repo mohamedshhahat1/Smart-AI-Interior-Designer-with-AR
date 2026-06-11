@@ -240,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true && mounted) {
-      await ApiClient().clearToken();
+      await ApiClient().clearTokens();
       if (mounted) context.go('/login');
     }
   }

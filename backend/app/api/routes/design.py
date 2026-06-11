@@ -148,7 +148,11 @@ async def list_designs(
         .where(Room.user_id == uuid.UUID(user_id))
     )
     if room_id:
-        query = query.where(Design.room_id == uuid.UUID(room_id))
+        try:
+            room_uuid = uuid.UUID(room_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid UUID format")
+        query = query.where(Design.room_id == room_uuid)
     query = query.order_by(Design.created_at.desc())
     result = await db.execute(query)
     designs = result.scalars().all()
