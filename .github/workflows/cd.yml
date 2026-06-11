@@ -14,6 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare container image names
+        id: images
+        shell: bash
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          echo "backend=ghcr.io/${repository}/backend" >> "$GITHUB_OUTPUT"
+          echo "ai_service=ghcr.io/${repository}/ai-service" >> "$GITHUB_OUTPUT"
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -29,8 +37,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/backend:latest
-            ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+            ${{ steps.images.outputs.backend }}:latest
+            ${{ steps.images.outputs.backend }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -41,7 +49,7 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/ai-service:latest
-            ghcr.io/${{ github.repository }}/ai-service:${{ github.sha }}
+            ${{ steps.images.outputs.ai_service }}:latest
+            ${{ steps.images.outputs.ai_service }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
