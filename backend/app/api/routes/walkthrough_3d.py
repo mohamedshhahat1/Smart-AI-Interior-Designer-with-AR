@@ -17,6 +17,7 @@ from backend.app.schemas.response_models import (
     WalkthroughPathPoint,
 )
 from backend.app.services.walkthrough_3d_service import walkthrough_3d_service
+from backend.app.services.storage_service import storage_service
 from backend.app.core.security import get_current_user_id
 
 router = APIRouter(prefix="/3d", tags=["3D Walkthrough / Room Generation"])
@@ -54,7 +55,8 @@ async def list_3d_models(
         Room3DSummary(
             id=str(m.id), name=m.name, room_type=m.room_type,
             status=m.status, quality_level=m.quality_level,
-            glb_model_url=m.glb_model_url, polygon_count=m.polygon_count,
+            glb_model_url=storage_service.to_public_url(m.glb_model_url),
+            polygon_count=m.polygon_count,
             view_count=m.view_count, created_at=m.created_at,
         )
         for m in models
@@ -151,9 +153,12 @@ def _model_to_response(model) -> Room3DModelResponse:
         id=str(model.id), name=model.name, room_type=model.room_type,
         status=model.status, reconstruction_method=model.reconstruction_method,
         quality_level=model.quality_level, dimensions=model.dimensions,
-        room_geometry=model.room_geometry, depth_map_url=model.depth_map_url,
-        mesh_url=model.mesh_url, glb_model_url=model.glb_model_url,
-        usdz_model_url=model.usdz_model_url, furniture_objects=furniture,
+        room_geometry=model.room_geometry,
+        depth_map_url=storage_service.to_public_url(model.depth_map_url),
+        mesh_url=storage_service.to_public_url(model.mesh_url),
+        glb_model_url=storage_service.to_public_url(model.glb_model_url),
+        usdz_model_url=storage_service.to_public_url(model.usdz_model_url),
+        furniture_objects=furniture,
         lighting_setup=lighting, camera_positions=cameras,
         walkthrough_path=walkthrough, polygon_count=model.polygon_count,
         file_size_mb=model.file_size_mb,
