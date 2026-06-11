@@ -40,7 +40,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text,
       );
 
-      await ApiClient().setToken(response['access_token']);
+      await ApiClient().setTokens(
+        accessToken: response['access_token'] as String,
+        refreshToken: response['refresh_token'] as String?,
+      );
 
       if (mounted) context.go('/');
     } catch (e) {

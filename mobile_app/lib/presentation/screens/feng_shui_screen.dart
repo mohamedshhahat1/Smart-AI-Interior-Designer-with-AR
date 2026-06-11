@@ -143,9 +143,8 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
             ..._directions.asMap().entries.map((entry) {
               final i = entry.key;
               final dir = entry.value;
-              final angle = (i * 45 - 90) * 3.14159 / 180;
               final radius = 100.0;
-              final x = radius * (angle == -1.5708 ? 0 : _cos(i * 45 - 90));
+              final x = radius * _cos(i * 45 - 90);
               final y = radius * _sin(i * 45 - 90);
               final isSelected = _selectedDirection == dir;
 
@@ -346,7 +345,7 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
         leading: CircleAvatar(backgroundColor: color.withOpacity(0.15), child: Icon(_elementIcons[zone.element] ?? Icons.circle, color: color, size: 18)),
         title: Text(zone.zone, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: Row(children: [
-          Text('${zone.direction.toUpperCase()} • ${zone.element}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text('${zone.direction.toUpperCase()} \u2022 ${zone.element}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -445,6 +444,6 @@ class _FengShuiScreenState extends State<FengShuiScreen> with SingleTickerProvid
   double _cos(int degrees) => _cosTable[degrees % 360] ?? 0;
   double _sin(int degrees) => _sinTable[degrees % 360] ?? 0;
 
-  static final _cosTable = {0: 1.0, 45: 0.707, 90: 0.0, 135: -0.707, 180: -1.0, 225: -0.707, 270: 0.0, 315: 0.707, -90: 0.0, -45: 0.707, -0: 1.0};
-  static final _sinTable = {0: 0.0, 45: 0.707, 90: 1.0, 135: 0.707, 180: 0.0, 225: -0.707, 270: -1.0, 315: -0.707, -90: -1.0, -45: -0.707, -0: 0.0};
+  static final _cosTable = {0: 1.0, 45: 0.707, 90: 0.0, 135: -0.707, 180: -1.0, 225: -0.707, 270: 0.0, 315: 0.707};
+  static final _sinTable = {0: 0.0, 45: 0.707, 90: 1.0, 135: 0.707, 180: 0.0, 225: -0.707, 270: -1.0, 315: -0.707};
 }

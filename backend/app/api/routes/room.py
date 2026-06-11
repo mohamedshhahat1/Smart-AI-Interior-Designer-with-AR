@@ -47,6 +47,8 @@ async def upload_room(
     image_filename = f"rooms/{user_id}/{uuid.uuid4()}.{ext}"
 
     storage_service.upload_bytes(image_filename, contents, content_type=file.content_type or "image/jpeg")
+    # Stored URL is the internal endpoint so the AI service can fetch it inside
+    # the docker network. Client responses convert it to the public endpoint.
     image_url = storage_service.get_internal_url(image_filename)
 
     try:
@@ -115,7 +117,7 @@ def _room_to_response(room: Room) -> RoomResponse:
     return RoomResponse(
         id=str(room.id),
         user_id=str(room.user_id),
-        image_url=room.image_url,
+        image_url=storage_service.to_public_url(room.image_url),
         room_type=room.room_type or "unknown",
         area=room.area,
         detected_objects=room.detected_objects or [],

@@ -2,6 +2,7 @@ import io
 import json
 import logging
 from datetime import timedelta
+from typing import Optional
 
 from minio import Minio
 from minio.error import S3Error
@@ -70,9 +71,31 @@ class StorageService:
     def get_presigned_url(self, object_name: str, expires: timedelta = timedelta(hours=2)) -> str:
         return self.client.presigned_get_object(BUCKET_NAME, object_name, expires=expires)
 
+    def _scheme(self) -> str:
+        return "https" if settings.minio_secure else "http"
+
     def get_internal_url(self, object_name: str) -> str:
-        scheme = "https" if settings.minio_secure else "http"
-        return f"{scheme}://{settings.minio_endpoint}/{BUCKET_NAME}/{object_name}"
+        """URL reachable from within the docker network (e.g. by the AI service)."""
+        return f"{self._scheme()}://{settings.minio_endpoint}/{BUCKET_NAME}/{object_name}"
+
+    def get_public_url(self, object_name: str) -> str:
+        """URL reachable by external clients (browser / phone)."""
+        endpoint = settings.minio_public_endpoint or settings.minio_endpoint
+        return f"{self._scheme()}://{endpoint}/{BUCKET_NAME}/{object_name}"
+
+    def to_public_url(self, url: Optional[str]) -> Optional[str]:
+        """Convert a stored internal MinIO URL into a public-facing one.
+        Leaves the URL untouched when no public endpoint is configured or when
+        it does not point at the internal endpoint."""
+        if not url or not settings.minio_public_endpoint:
+            return url
+        internal = settings.minio_endpoint
+        public = settings.minio_public_endpoint
+        for scheme in ("http://", "https://"):
+            prefix = f"{scheme}{internal}"
+            if url.startswith(prefix):
+                return f"{scheme}{public}" + url[len(prefix):]
+        return url
 
 
 storage_service = StorageService()

@@ -1,5 +1,5 @@
 import os
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
@@ -21,6 +21,7 @@ class BaseAppSettings(BaseSettings):
     refresh_token_expire_days: int = 30
 
     minio_endpoint: str = "localhost:9000"
+    minio_public_endpoint: Optional[str] = None
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_secure: bool = False

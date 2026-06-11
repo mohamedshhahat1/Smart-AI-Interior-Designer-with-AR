@@ -13,6 +13,7 @@ from backend.app.schemas.request_models import DesignGenerateRequest, DesignEnha
 from backend.app.schemas.response_models import DesignResponse
 from backend.app.services.ai_service import ai_service
 from backend.app.services.cost_service import cost_service
+from backend.app.services.storage_service import storage_service
 from backend.app.core.security import get_current_user_id
 from backend.app.core.limiter import limiter
 
@@ -185,7 +186,7 @@ def _design_to_response(design: Design) -> DesignResponse:
         room_id=str(design.room_id),
         style=design.style or "modern",
         prompt=design.prompt,
-        generated_image_url=design.generated_image_url,
+        generated_image_url=storage_service.to_public_url(design.generated_image_url),
         color_palette=design.color_palette,
         furniture_list=design.furniture_list or [],
         estimated_cost=design.estimated_cost or 0.0,
