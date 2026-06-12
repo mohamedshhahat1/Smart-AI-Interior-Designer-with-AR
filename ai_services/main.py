@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 from typing import Optional
 
 from ai_services.vision.room_analysis import room_analyzer
@@ -144,8 +145,7 @@ def _build_color_palette(style: str, image) -> dict:
 
 @app.post("/vision/analyze")
 async def analyze_room(request: AnalyzeRequest):
-    result = room_analyzer.analyze(request.image_url)
-    return result
+    return await run_in_threadpool(room_analyzer.analyze, request.image_url)
 
 
 @app.post("/generation/design")
@@ -167,10 +167,11 @@ async def generate_design(request: DesignRequest):
         budget=request.budget,
     )
 
-    generated_image_url, generated_image = _render_design(
-        prompt_data=prompt_data,
-        image_url=request.room_analysis.get("image_url"),
-        preserve_layout=request.preserve_layout,
+    generated_image_url, generated_image = await run_in_threadpool(
+        _render_design,
+        prompt_data,
+        request.room_analysis.get("image_url"),
+        request.preserve_layout,
     )
 
     color_palette = _build_color_palette(request.style, generated_image)
@@ -210,10 +211,11 @@ async def enhance_design(request: EnhanceRequest):
         instruction=request.instruction,
     )
 
-    rendered_url, rendered_image = _render_design(
-        prompt_data=prompt_data,
-        image_url=request.design_data.get("image_url"),
-        preserve_layout=True,
+    rendered_url, rendered_image = await run_in_threadpool(
+        _render_design,
+        prompt_data,
+        request.design_data.get("image_url"),
+        True,
     )
     enhanced_image_url = rendered_url or request.design_data.get("image_url")
 
@@ -234,7 +236,8 @@ async def enhance_design(request: EnhanceRequest):
 
 @app.post("/recommendation/furniture")
 async def recommend_furniture(request: RecommendRequest):
-    candidates = catalog_search.search(
+    candidates = await run_in_threadpool(
+        catalog_search.search,
         style=request.style,
         max_price=request.budget,
         limit=30,

@@ -7,6 +7,9 @@ ENV PYTHONPATH=/app
 ENV DESIGN_OUTPUT_DIR=/app/designs
 ENV MODEL_CACHE_DIR=/models
 ENV HOME=/home/appuser
+ENV XDG_CONFIG_HOME=/home/appuser/.config
+ENV MPLCONFIGDIR=/home/appuser/.config/matplotlib
+ENV YOLO_CONFIG_DIR=/home/appuser/.config/Ultralytics
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

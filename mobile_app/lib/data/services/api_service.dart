@@ -63,13 +63,19 @@ class ApiService {
     double? budget,
     bool preserveLayout = true,
   }) async {
-    final response = await _dio.post('/design/generate', data: {
-      'room_id': roomId,
-      'style': style,
-      'prompt': prompt,
-      'budget': budget,
-      'preserve_layout': preserveLayout,
-    });
+    final response = await _dio.post(
+      '/design/generate',
+      data: {
+        'room_id': roomId,
+        'style': style,
+        'prompt': prompt,
+        'budget': budget,
+        'preserve_layout': preserveLayout,
+      },
+      options: Options(
+        receiveTimeout: const Duration(minutes: 20),
+      ),
+    );
     return DesignModel.fromJson(response.data);
   }
 
@@ -194,7 +200,8 @@ class ApiService {
     return response.data;
   }
 
-  Future<Map<String, dynamic>> updateProfile({String? name, String? email}) async {
+  Future<Map<String, dynamic>> updateProfile(
+      {String? name, String? email}) async {
     final response = await _dio.patch('/auth/me', data: {
       if (name != null) 'name': name,
       if (email != null) 'email': email,

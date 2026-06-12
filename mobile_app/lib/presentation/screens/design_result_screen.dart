@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_interior_ai/core/theme/app_theme.dart';
@@ -19,6 +20,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
   DesignModel? _design;
   bool _isLoading = true;
   bool _isEnhancing = false;
+  String? _generationError;
 
   @override
   void initState() {
@@ -55,7 +57,10 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
   }
 
   Future<void> _generateDesign() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _generationError = null;
+    });
     try {
       final design = await _apiService.generateDesign(
         roomId: widget.roomId,
@@ -66,13 +71,34 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      final message = _formatGenerationError(e);
+      setState(() {
+        _isLoading = false;
+        _generationError = message;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to generate design')),
+          SnackBar(content: Text(message)),
         );
       }
     }
+  }
+
+  String _formatGenerationError(Object error) {
+    if (error is DioException) {
+      if (error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionTimeout) {
+        return 'Generation timed out. The first design may take several minutes while AI models download.';
+      }
+      final data = error.response?.data;
+      if (data is Map && data['detail'] != null) {
+        return data['detail'].toString();
+      }
+      if (error.type == DioExceptionType.connectionError) {
+        return 'Cannot reach the design service. Check Docker and the USB connection.';
+      }
+    }
+    return 'Failed to generate design. Please retry.';
   }
 
   Future<void> _enhanceDesign() async {
@@ -104,7 +130,8 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
           width: double.infinity,
           height: 300,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildImagePlaceholder(),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
@@ -177,6 +204,9 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text('Generating your design...'),
+                SizedBox(height: 8),
+                Text(
+                    'The first generation downloads AI models and may take several minutes.'),
               ],
             ))
           : _design == null
@@ -184,7 +214,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Failed to generate design'),
+                      Text(_generationError ?? 'Failed to generate design'),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _generateDesign,
@@ -260,8 +290,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                             child: TextField(
                               controller: _promptController,
                               decoration: const InputDecoration(
-                                hintText:
-                                    'e.g., Make the room look larger...',
+                                hintText: 'e.g., Make the room look larger...',
                               ),
                             ),
                           ),
@@ -284,8 +313,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  context.go('/ar/${_design!.id}'),
+                              onPressed: () => context.go('/ar/${_design!.id}'),
                               icon: const Icon(Icons.view_in_ar),
                               label: const Text('View in AR'),
                             ),
