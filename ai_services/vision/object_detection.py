@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from pathlib import Path
 from typing import Optional
@@ -28,13 +29,19 @@ CUSTOM_LABELS = [
 
 class ObjectDetector:
     def __init__(self, model_path: Optional[str] = None):
-        self.model_path = model_path or "yolov8x.pt"
+        if model_path:
+            self.model_path = Path(model_path).expanduser()
+        else:
+            cache_dir = Path(os.getenv("MODEL_CACHE_DIR", "/tmp/models"))
+            model_name = os.getenv("YOLO_MODEL", "yolov8x.pt")
+            self.model_path = cache_dir / model_name
         self.model = None
         self.confidence_threshold = 0.35
 
     def load_model(self):
         if self.model is None:
-            self.model = YOLO(self.model_path)
+            self.model_path.parent.mkdir(parents=True, exist_ok=True)
+            self.model = YOLO(str(self.model_path))
 
     def detect(self, image_path: str) -> list[dict]:
         self.load_model()

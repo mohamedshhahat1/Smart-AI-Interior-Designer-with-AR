@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONPATH=/app
 ENV DESIGN_OUTPUT_DIR=/app/designs
 ENV MODEL_CACHE_DIR=/models
+ENV HOME=/home/appuser
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -22,10 +23,14 @@ COPY ai_services/requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=appuser:appuser ai_services/ ./ai_services/
+COPY ai_services/docker-entrypoint.sh /usr/local/bin/ai-service-entrypoint
 
-RUN mkdir -p /app/designs /models && chown -R appuser:appuser /app/designs /models
+RUN mkdir -p /app/designs /models && \
+    chown -R appuser:appuser /app/designs /models && \
+    sed -i 's/\r$//' /usr/local/bin/ai-service-entrypoint && \
+    chmod 755 /usr/local/bin/ai-service-entrypoint
 
-USER appuser
+ENTRYPOINT ["/usr/local/bin/ai-service-entrypoint"]
 
 EXPOSE 8001
 
