@@ -19,8 +19,7 @@ STYLE_PROMPTS = {
 }
 
 QUALITY_SUFFIX = (
-    "professional interior photography, 8k resolution, perfect lighting, "
-    "architectural digest quality, photorealistic, detailed textures"
+    "photorealistic interior photo, realistic scale, detailed materials, natural lighting"
 )
 
 NEGATIVE_PROMPT = (
@@ -28,6 +27,15 @@ NEGATIVE_PROMPT = (
     "watermark, text, oversaturated, cartoon, anime, sketch, painting style, "
     "people, animals, outdoors"
 )
+
+ROOM_FURNISHING_PROMPTS = {
+    "living_room": "furnished with a sofa, coffee table, area rug, side tables, and warm lighting",
+    "bedroom": "furnished with a bed, nightstands, wardrobe, area rug, and warm lighting",
+    "dining_room": "furnished with a dining table, dining chairs, pendant light, and sideboard",
+    "kitchen": "furnished kitchen with cabinets, worktops, appliances, and practical lighting",
+    "office": "furnished with a desk, ergonomic chair, storage, shelving, and task lighting",
+    "bathroom": "finished bathroom with vanity, mirror, storage, fixtures, and layered lighting",
+}
 
 
 class PromptBuilder:
@@ -39,11 +47,17 @@ class PromptBuilder:
         detected_objects: Optional[list[str]] = None,
         budget: Optional[float] = None,
     ) -> dict:
-        style_base = STYLE_PROMPTS.get(style, STYLE_PROMPTS["modern"])
+        style_key = style.strip().lower().replace("-", "_").replace(" ", "_")
+        style_base = STYLE_PROMPTS.get(style_key, STYLE_PROMPTS["modern"])
 
-        room_context = f"{room_type.replace('_', ' ')} interior"
+        room_key = room_type.strip().lower().replace("-", "_").replace(" ", "_")
+        room_context = f"{room_key.replace('_', ' ')} interior"
 
-        parts = [style_base, room_context]
+        furnishing = ROOM_FURNISHING_PROMPTS.get(
+            room_key,
+            "fully furnished with appropriately scaled furniture, decor, and lighting",
+        )
+        parts = [style_base, room_context, furnishing]
 
         if user_prompt:
             parts.append(user_prompt)
@@ -69,12 +83,14 @@ class PromptBuilder:
             "negative": NEGATIVE_PROMPT,
             "style": style,
             "room_type": room_type,
+            "is_empty_room": not detected_objects,
         }
 
     def build_enhancement_prompt(
         self, current_style: str, instruction: str
     ) -> dict:
-        style_base = STYLE_PROMPTS.get(current_style, "")
+        style_key = current_style.strip().lower().replace("-", "_").replace(" ", "_")
+        style_base = STYLE_PROMPTS.get(style_key, "")
 
         positive = f"{style_base}, {instruction}, {QUALITY_SUFFIX}"
 

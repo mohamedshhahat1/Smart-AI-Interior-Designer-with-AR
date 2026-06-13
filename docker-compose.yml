@@ -50,6 +50,7 @@ services:
       - MODEL_CACHE_DIR=/models
       - HF_HOME=/models
       - STABLE_DIFFUSION_MODEL=${STABLE_DIFFUSION_MODEL:-stable-diffusion-v1-5/stable-diffusion-v1-5}
+      - STABLE_DIFFUSION_INPAINT_MODEL=${STABLE_DIFFUSION_INPAINT_MODEL:-stable-diffusion-v1-5/stable-diffusion-inpainting}
       - CONTROLNET_MODEL=${CONTROLNET_MODEL:-lllyasviel/control_v11p_sd15_canny}
       - AI_FORCE_FULL_PRECISION=${AI_FORCE_FULL_PRECISION:-auto}
       - XDG_CONFIG_HOME=/tmp/app-config

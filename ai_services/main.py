@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from typing import Optional
@@ -94,16 +94,11 @@ def _render_design(prompt_data: dict, image_url: Optional[str], preserve_layout:
     """Render a design image, persist it, and return (public_url_or_path, image).
     Returns (None, None) if generation fails."""
     try:
-        original = None
-        if preserve_layout and image_url:
-            try:
-                # load_image transparently handles both local paths and http(s) URLs.
-                original = load_image(image_url)
-            except Exception as exc:
-                logger.warning("Could not load source image for layout preservation: %s", exc)
-                original = None
-
-        if original is not None:
+        if preserve_layout:
+            if not image_url:
+                raise ValueError("A source room image is required to preserve layout")
+            # load_image transparently handles both local paths and http(s) URLs.
+            original = load_image(image_url)
             generated_image = controlnet_pipeline.redesign_room(
                 original_image=original,
                 prompt_data=prompt_data,
@@ -173,6 +168,8 @@ async def generate_design(request: DesignRequest):
         request.room_analysis.get("image_url"),
         request.preserve_layout,
     )
+    if generated_image_url is None:
+        raise HTTPException(status_code=500, detail="Room-aware image generation failed")
 
     color_palette = _build_color_palette(request.style, generated_image)
 
