@@ -433,7 +433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Text(room['room_type'] as String? ?? 'Room', style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(_formatDate(room['created_at'] as String?), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => context.go('/design/${room['id']}'),
+        onTap: () => context.push('/design/${room['id']}'),
       ),
     );
   }

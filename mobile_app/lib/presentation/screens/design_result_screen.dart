@@ -185,12 +185,12 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.view_in_ar),
-              onPressed: () => context.go('/ar/${_design!.id}'),
+              onPressed: () => context.push('/ar/${_design!.id}'),
               tooltip: 'View in AR',
             ),
             IconButton(
               icon: const Icon(Icons.calculate),
-              onPressed: () => context.go('/cost/${_design!.id}'),
+              onPressed: () => context.push('/cost/${_design!.id}'),
               tooltip: 'Cost Estimation',
             ),
           ],
@@ -313,7 +313,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => context.go('/ar/${_design!.id}'),
+                              onPressed: () => context.push('/ar/${_design!.id}'),
                               icon: const Icon(Icons.view_in_ar),
                               label: const Text('View in AR'),
                             ),
@@ -322,7 +322,7 @@ class _DesignResultScreenState extends State<DesignResultScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () =>
-                                  context.go('/cost/${_design!.id}'),
+                                  context.push('/cost/${_design!.id}'),
                               icon: const Icon(Icons.calculate),
                               label: const Text('Get Cost'),
                               style: ElevatedButton.styleFrom(

@@ -57,21 +57,28 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         break;
       case 1:
-        context.go('/scan');
+        context.push('/scan').then((_) => _resetBottomNavigation());
         break;
       case 2:
         _openAssistantPicker();
         break;
       case 3:
-        context.go('/profile');
+        context.push('/profile').then((_) => _resetBottomNavigation());
         break;
     }
   }
 
+  void _resetBottomNavigation() {
+    if (mounted) setState(() => _selectedNavIndex = 0);
+  }
+
   void _openAssistantPicker() {
     if (_recentDesigns.isNotEmpty) {
-      context.go('/assistant/${_recentDesigns.first['id']}');
+      context
+          .push('/assistant/${_recentDesigns.first['id']}')
+          .then((_) => _resetBottomNavigation());
     } else {
+      _resetBottomNavigation();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Scan a room first to use the AI assistant')),
       );
@@ -93,12 +100,12 @@ class _HomeScreenState extends State<HomeScreen> {
       final designs = await _apiService.listDesigns(roomId: roomId);
       if (!mounted) return;
       if (designs.isNotEmpty) {
-        context.go('$prefix/${designs.first.id}');
+        context.push('$prefix/${designs.first.id}');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Generate a design for this room first')),
         );
-        context.go('/design/$roomId');
+        context.push('/design/$roomId');
       }
     } catch (e) {
       if (!mounted) return;
@@ -145,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppTheme.secondaryColor,
                     onTap: () {
                       if (_recentDesigns.isNotEmpty) {
-                        context.go('/design/${_recentDesigns.first['id']}');
+                        context.push('/design/${_recentDesigns.first['id']}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Scan a room first to generate designs')),
@@ -180,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppTheme.successColor,
                     onTap: () {
                       if (_recentDesigns.isNotEmpty) {
-                        context.go('/furniture/${_recentDesigns.first['id']}');
+                        context.push('/furniture/${_recentDesigns.first['id']}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Scan a room first to get furniture recommendations')),
@@ -273,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.go('/design/${design['id']}'),
+            onTap: () => context.push('/design/${design['id']}'),
           ),
         );
       }).toList(),
@@ -297,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildScanCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/scan'),
+      onTap: () => context.push('/scan'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -351,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMultiRoomCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/house/new'),
+      onTap: () => context.push('/house/new'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -404,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSmartLightingCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/lighting'),
+      onTap: () => context.push('/lighting'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -457,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFengShuiCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/feng-shui'),
+      onTap: () => context.push('/feng-shui'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -511,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSeasonalCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/seasonal'),
+      onTap: () => context.push('/seasonal'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -564,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPetFriendlyCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/pet-friendly'),
+      onTap: () => context.push('/pet-friendly'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -617,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _build3DWalkthroughCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/3d-walkthrough'),
+      onTap: () => context.push('/3d-walkthrough'),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),

@@ -135,7 +135,7 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.calculate),
-            onPressed: () => context.go('/house/${widget.projectId}/cost'),
+            onPressed: () => context.push('/house/${widget.projectId}/cost'),
             tooltip: 'Cost Report',
           ),
         ],
@@ -430,7 +430,7 @@ class _HouseDetailScreenState extends State<HouseDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            context.go('/ar/house/${room.id}');
+                            context.push('/ar/house/${room.id}');
                           },
                           icon: const Icon(Icons.view_in_ar),
                           label: const Text('View in AR'),

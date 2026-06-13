@@ -20,6 +20,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  void _returnToLogin() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/login');
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -60,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/login'))),
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _returnToLogin)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -119,7 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: _returnToLogin,
                       child: const Text('Already have an account? Sign In'),
                     ),
                   ],

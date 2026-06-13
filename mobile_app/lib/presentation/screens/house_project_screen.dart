@@ -223,7 +223,7 @@ class _HouseProjectScreenState extends State<HouseProjectScreen> {
 
       if (mounted) {
         final projectId = response.data['id'];
-        context.go('/house/$projectId');
+        context.pushReplacement('/house/$projectId');
       }
     } catch (e) {
       if (mounted) {

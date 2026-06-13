@@ -234,7 +234,7 @@ class _RoomScanScreenState extends State<RoomScanScreen> with WidgetsBindingObse
         final stylePath = _selectedStyle != null
             ? '/design/${room.id}?style=${Uri.encodeComponent(_selectedStyle!)}'
             : '/design/${room.id}';
-        context.go(stylePath);
+        context.pushReplacement(stylePath);
       }
     } catch (e, stackTrace) {
       debugPrint('Room upload error: $e');
@@ -262,7 +262,7 @@ class _RoomScanScreenState extends State<RoomScanScreen> with WidgetsBindingObse
         title: const Text('Scan Room'),
         leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/')),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
