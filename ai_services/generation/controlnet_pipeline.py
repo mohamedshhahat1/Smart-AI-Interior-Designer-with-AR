@@ -1,7 +1,10 @@
+import os
 import torch
 import numpy as np
 from typing import Optional
 from PIL import Image
+
+from ai_services.generation.precision import get_inference_dtype, has_limited_vram
 
 
 class ControlNetPipeline:
@@ -9,6 +12,14 @@ class ControlNetPipeline:
         self.pipe = None
         self.controlnet = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.dtype = get_inference_dtype(self.device)
+        self.base_model_id = os.getenv(
+            "STABLE_DIFFUSION_MODEL",
+            "stable-diffusion-v1-5/stable-diffusion-v1-5",
+        )
+        self.controlnet_model_id = os.getenv(
+            "CONTROLNET_MODEL", "lllyasviel/control_v11p_sd15_canny"
+        )
 
     def load_model(self):
         if self.pipe is not None:
@@ -20,19 +31,27 @@ class ControlNetPipeline:
             from diffusers import ControlNetModel, StableDiffusionControlNetPipeline
 
             self.controlnet = ControlNetModel.from_pretrained(
-                "lllyasviel/control_v11p_sd15_canny",
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                self.controlnet_model_id,
+                torch_dtype=self.dtype,
             )
 
             self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
-                "nota-ai/bk-sdm-small",
+                self.base_model_id,
                 controlnet=self.controlnet,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                torch_dtype=self.dtype,
                 safety_checker=None,
             )
-            self.pipe = self.pipe.to(self.device)
-        except Exception:
-            self.pipe = "unavailable"
+            if self.dtype == torch.float16:
+                # Keep VAE decoding stable while the rest of the pipeline uses FP16.
+                self.pipe.vae.register_to_config(force_upcast=True)
+            self.pipe.enable_attention_slicing()
+            if has_limited_vram(self.device):
+                self.pipe.enable_model_cpu_offload()
+            else:
+                self.pipe = self.pipe.to(self.device)
+        except Exception as exc:
+            self.pipe = None
+            raise RuntimeError("Failed to load the SD 1.5 ControlNet pipeline") from exc
 
     def generate_with_structure(
         self,
