@@ -85,7 +85,7 @@ async def generate_design(
     db.add(design)
     await db.flush()
 
-    return _design_to_response(design)
+    return _design_to_response(design, request)
 
 
 @router.post("/enhance", response_model=DesignResponse)
@@ -133,11 +133,12 @@ async def enhance_design(
     design.color_palette = enhanced.get("color_palette", design.color_palette)
     await db.flush()
 
-    return _design_to_response(design)
+    return _design_to_response(design, request)
 
 
 @router.get("/", response_model=list[DesignResponse])
 async def list_designs(
+    request: Request,
     room_id: str = None,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
@@ -156,12 +157,13 @@ async def list_designs(
     query = query.order_by(Design.created_at.desc())
     result = await db.execute(query)
     designs = result.scalars().all()
-    return [_design_to_response(d) for d in designs]
+    return [_design_to_response(d, request) for d in designs]
 
 
 @router.get("/{design_id}", response_model=DesignResponse)
 async def get_design(
     design_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
@@ -181,16 +183,21 @@ async def get_design(
     if not room_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    return _design_to_response(design)
+    return _design_to_response(design, request)
 
 
-def _design_to_response(design: Design) -> DesignResponse:
+def _design_to_response(design: Design, request: Request) -> DesignResponse:
+    image_url = design.generated_image_url
+    object_name = storage_service.get_object_name(image_url)
+    if object_name:
+        image_url = str(request.url_for("get_media", object_path=object_name))
+
     return DesignResponse(
         id=str(design.id),
         room_id=str(design.room_id),
         style=design.style or "modern",
         prompt=design.prompt,
-        generated_image_url=storage_service.to_public_url(design.generated_image_url),
+        generated_image_url=image_url,
         color_palette=design.color_palette,
         furniture_list=design.furniture_list or [],
         estimated_cost=design.estimated_cost or 0.0,

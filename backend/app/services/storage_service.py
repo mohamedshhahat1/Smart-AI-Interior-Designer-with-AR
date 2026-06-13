@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import timedelta
 from typing import Optional
+from urllib.parse import unquote, urlparse
 
 from minio import Minio
 from minio.error import S3Error
@@ -96,6 +97,18 @@ class StorageService:
             if url.startswith(prefix):
                 return f"{scheme}{public}" + url[len(prefix):]
         return url
+
+    def get_object_name(self, url: Optional[str]) -> Optional[str]:
+        """Extract the MinIO object name from an internal or public object URL."""
+        if not url:
+            return None
+
+        parsed = urlparse(url)
+        path = unquote(parsed.path if parsed.scheme else url).lstrip("/")
+        bucket_prefix = f"{BUCKET_NAME}/"
+        if path.startswith(bucket_prefix):
+            return path[len(bucket_prefix):]
+        return None
 
 
 storage_service = StorageService()
