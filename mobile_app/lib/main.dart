@@ -21,6 +21,8 @@ import 'package:smart_interior_ai/presentation/screens/seasonal_theme_screen.dar
 import 'package:smart_interior_ai/presentation/screens/pet_friendly_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/walkthrough_3d_screen.dart';
 import 'package:smart_interior_ai/presentation/screens/profile_screen.dart';
+import 'package:smart_interior_ai/presentation/screens/onboarding_screen.dart';
+import 'package:smart_interior_ai/data/repositories/onboarding_repository.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -28,19 +30,31 @@ void main() {
   runApp(const ProviderScope(child: SmartInteriorApp()));
 }
 
-const _publicRoutes = ['/login', '/register'];
+const _publicRoutes = ['/onboarding', '/login', '/register'];
 
 final _router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) async {
+    final onboardingCompleted = await OnboardingRepository().isCompleted();
+    final isOnboarding = state.matchedLocation == '/onboarding';
+
+    if (!onboardingCompleted) {
+      return isOnboarding ? null : '/onboarding';
+    }
+
     final isLoggedIn = await ApiClient().hasValidSession();
     final isPublicRoute = _publicRoutes.contains(state.matchedLocation);
 
+    if (isOnboarding) return isLoggedIn ? '/' : '/login';
     if (!isLoggedIn && !isPublicRoute) return '/login';
     if (isLoggedIn && isPublicRoute) return '/';
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),

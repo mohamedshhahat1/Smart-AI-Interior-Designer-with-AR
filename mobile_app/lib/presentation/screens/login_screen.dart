@@ -64,7 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 60),
-              const Icon(Icons.design_services, size: 48, color: AppTheme.primaryColor),
+              const Hero(
+                tag: 'smart-interior-brand',
+                child: Material(
+                  color: Colors.transparent,
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 48,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               Text('Welcome Back', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
